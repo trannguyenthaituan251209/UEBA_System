@@ -1,0 +1,249 @@
+/* OUTER CARD FOR RESULT CARDS */
+.result-cards-outer-card {
+  background: #fff;
+  border-radius: 18px;
+  box-shadow: 0 4px 24px 0 rgba(56,189,248,0.10);
+  border: 1.5px solid #bac7db;
+  padding: 32px 24px 32px 24px;
+  margin: 0 auto 24px auto;
+  max-width: 1100px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+/* RESULT TABLE (detect section) */
+/* RESULT CARDS */
+#resultCards {
+  display: flex;
+  gap: 20px;
+  flex-wrap: wrap;
+  justify-content: center;
+  margin-top: 24px;
+}
+.result-card {
+  background: #fff;
+  border-radius: 16px;
+  box-shadow: 0 2px 12px 0 rgba(56,189,248,0.09);
+  border: 1px solid #bac7db;
+  padding: 24px 32px;
+  min-width: 260px;
+  max-width: 340px;
+  min-height: 80px;
+  display: flex;
+  align-items: center;
+  transition: box-shadow 0.2s;
+}
+.result-card:hover {
+  box-shadow: 0 4px 24px 0 rgba(56,189,248,0.18);
+}
+.result-card-top1 {
+  min-width: 340px;
+  max-width: 420px;
+  min-height: 110px;
+  border: 2px solid #e11d48;
+  background: #fff0f3;
+}
+.result-card-top {
+  border: 2px solid #0284c7;
+}
+/* DETECT SECTION DECORATION */
+.detect-section {
+  max-width: 1100px;
+  margin: 40px auto 0 auto;
+  padding: 32px 24px 32px 24px;
+  background: #ffffff;
+  border-radius: 12px;
+  border: 1px solid #bac7db;
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+.detect-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 18px;
+  justify-content: center;
+}
+.detect-icon {
+  width: 32px;
+  height: 32px;
+  background: #e0f2fe;
+  border-radius: 8px;
+  padding: 6px;
+  box-shadow: 0 2px 8px 0 rgba(56,189,248,0.10);
+}
+.detect-title {
+  margin: 0;
+  font-size: 1.5rem;
+  font-family: 'Helve';
+  color: #000000;
+  letter-spacing: 1px;
+  text-align: center;
+}
+.detect-desc {
+  margin-bottom: 18px;
+  color: #727272;
+  font-size: 1.05em;
+  text-align: center;
+}
+.detect-btn {
+  background:#6f6f6f;
+  color: #fff;
+  font-family: 'Helve';
+  font-size: 1.1em;
+  padding: 10px 28px;
+  border: transparent;
+  border-radius: 12px;  
+  cursor: pointer;
+  margin-bottom: 18px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  justify-content: center;
+}
+.report-btn{
+  background: transparent;
+  color: #fff;
+  font-family: 'Helve';
+  font-size: 1.1em;
+  padding: 10px 28px;
+  border: #000000 1px solid;
+  border-radius: 12px;  
+  cursor: pointer;
+  margin-bottom: 18px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  justify-content: center; 
+}
+.detect-btn:hover {
+  background: #000000;
+}
+.report-btn:hover{
+    background: #b6b6b6;
+}
+.detect-status {
+  min-height: 24px;
+  font-size: 1em;
+  color: #3f3f3f;
+  font-weight: 500;
+  text-align: center;
+}
+@font-face {
+  font-family: 'Helve';
+  src: url('./assets/fonts/UTM Helve.ttf') format('truetype');
+  font-weight: 100;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'HelveBold';
+  src: url('./assets/fonts/UTM HelveBold.ttf') format('truetype');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+* {
+  box-sizing: border-box;
+  font-family: 'Helve'}
+
+body {
+  margin: 0;
+  background: #ffffff;
+  color: #020202;
+}
+h1, h2, h3, h4, h5, h6 {
+  margin: 0;    
+  color: #020202;
+}
+.app {
+  display: flex;
+  height: 100vh;
+}
+
+/* CONTENT */
+.content {
+  flex: 1;
+  padding: 24px;
+  overflow-y: auto;
+}
+
+/* SIDEBAR LEFT */
+.sidebar-left {
+    width: 240px;
+    background: #ffffff;
+    padding: 20px;
+    border-right: 1px solid #bac7db;
+    border-radius: 12px;
+    
+}
+
+.sidebar-left ul {
+    list-style: none;
+    padding: 0;
+}
+
+.sidebar-left li {
+    padding: 12px;
+    cursor: pointer;
+    border-radius: 6px;
+}
+
+.sidebar-left li:hover {
+    background: #1e293b;
+}
+
+/* PAGE CONTROL */
+.page {
+  display: none;
+}
+
+.page.active {
+  display: block;
+}
+/* DASHBOARD SECTION */
+
+
+/* DASHBOARD GRID */
+.grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+}
+
+.card {
+  background: #ffffff;
+  padding: 20px;
+  border-radius: 10px;
+  font-size: 16px;
+  border: #bac7db 1px solid;
+}
+
+.card b {
+  font-size: 24px;
+}
+
+.card.large {
+    grid-column: span 2;
+    grid-row: span 4;
+}
+
+.card.wide {
+  grid-column: span 2;
+  grid-row: span 1;
+}
+
+/* TABLE */
+
+
+th, td {
+  padding: 8px;
+  border-bottom: 1px solid #334155;
+}
+.hidden {
+  display: none;
+}

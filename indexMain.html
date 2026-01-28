@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <style>
+      .sidebar-left ul li {
+        font-family: 'Helve';
+        color: #6e6d6d !important;
+        font-weight: 500;
+        cursor: pointer;
+        transition: color 0.2s;
+        font-size: 0.9rem;
+      }
+      .sidebar-left ul li:hover {
+        color: #0ea5e9 !important;
+      }
+    </style>
+  <meta charset="UTF-8" />
+  <title>UEBA Admin</title>
+  <link rel="stylesheet" href="main.css" />
+  <script src="./main.js"></script>
+</head>
+<body>
+<div class="app" style="display:flex;width:100%;min-height:100vh;">
+  <!-- SIDEBAR LEFT -->
+  <aside class="sidebar-left">
+    <!-- Logo and Company Name -->
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:20px;padding-bottom:16px;border-bottom:2px solid #e5e7eb;">
+      <img src="./assets/ML.png" alt="Logo" style="height:32px;width:32px;object-fit:contain;" />
+      <span style="font-weight:bold;font-size:1rem;color:#000000;line-height:1.2;">NEAT ORGANIC</span>
+    </div>  
+    <div style="display: flex; align-items: center; gap: 8px;">
+      <h3 style="margin:0;font-size: 0.9rem;"><b>ADMIN DASHBOARD</b></h3>
+    </div>
+    <ul>
+      <div style="font-weight:bold;font-size:0.95em;color:#64748b;margin-bottom:8px;">Main menu</div>
+      <li onclick="showPage('dashboard')" style="display:flex;align-items:center;gap:8px;">
+        <img src="./assets/overview.png" alt="Dashboard" style="width:18px;height:18px;object-fit:contain;">Overview
+      </li>
+      <li onclick="showPage('detect')" style="display:flex;align-items:center;gap:8px;">
+        <img src="./assets/loupe.png" alt="Detect" style="width:18px;height:18px;object-fit:contain;">ML Detection
+      </li>
+      <li onclick="showPage('employee')" style="display:flex;align-items:center;gap:8px;">
+        <img src="./assets/employee.png" alt="Employee" style="width:18px;height:18px;object-fit:contain;">Employee Manager
+      </li>
+      <li onclick="showPage('database')" style="display:flex;align-items:center;gap:8px;">
+        <img src="./assets/database.png" alt="Database" style="width:18px;height:18px;object-fit:contain;">Database Manager
+      </li>
+    </ul>
+    <hr style="border:none;border-top:2px solid #e5e7eb;margin:24px 0 20px 0;" />
+    <div>
+      <div style="font-weight:bold;font-size:0.95em;color:#64748b;margin-bottom:8px;">Department</div>
+      <ul style="list-style:none;padding-left:0;">
+        <li style="color:#ffffff;margin-bottom:4px;display:flex;align-items:center;gap:8px;">
+          <span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#07cdfe;"></span>IT
+        </li>
+        <li style="color:#ffffff;margin-bottom:4px;display:flex;align-items:center;gap:8px;">
+          <span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#f59e42;"></span>Finance
+        </li>
+        <li style="color:#ffffff;margin-bottom:4px;display:flex;align-items:center;gap:8px;">
+          <span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#10b981;"></span>HR
+        </li>
+        <li style="color:#ffffff;margin-bottom:4px;display:flex;align-items:center;gap:8px;">
+          <span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#ef4444;"></span>Sales
+        </li>
+        <li style="color:#ffffff;margin-bottom:4px;display:flex;align-items:center;gap:8px;">
+          <span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#a855f7;"></span>Marketing
+        </li>
+      </ul>
+    </div>
+  </aside>
+  <main class="content">
+    <!-- DASHBOARD -->
+    <section id="dashboard" class="page active">
+              <!-- Wide Card: SearchBar + Login User -->
+        <div class="card wide" style="grid-column:1/-1;background:  #ffffff;display:flex;align-items:center;justify-content:space-between;gap:24px;padding:24px 32px 24px 24px;margin:16px 0 0 0;">
+          <div style="flex:1;display:flex;align-items:center;gap:12px;">
+            <input type="text" placeholder="Search employee, event, ..." style="width:320px;max-width:100%;padding:10px 16px;border-radius:8px;border:1px solid #d1d5db;font-size:1rem;outline:none;" />
+          </div>
+          <div style="display:flex;align-items:center;gap:10px;">
+            <img src="./assets/user1.png" alt="User Avatar" style="width:40px;height:40px;border-radius:50%;object-fit:cover;box-shadow:0 2px 8px #0001;" />
+            <div style="color:#222;font-size:1rem;">
+              <div style="font-weight:500;">Welcome,</div>
+              <div style="font-weight:bold;">Javiel Scott</div>
+            </div>
+          </div>
+        </div>
+        <p> </p>
+      <div class="overview-row" style="display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:24px;">
+        <div class="card" style="background: #f8c58e;">
+          <div style="font-size:0.95em;font-weight:600;">Active Database Session</div>
+          <div style="display:flex;align-items:flex-end;gap:8px;">
+            <span style="font-size:2rem;font-weight:bold;line-height:1.1;">244</span>
+            <span style="display:flex;align-items:center;font-size:0.95em;color:#888;margin-bottom:4px;gap:2px;">
+              <svg width="14" height="14" viewBox="0 0 20 20" fill="#10b981" style="margin-right:2px;"><path d="M10 16V4M10 4l-5 5M10 4l5 5" stroke="#10b981" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"/></svg>+4.2%</span>
+          </div>
+          <div style="font-size:0.85em;color:#7c5a00;">Current active sessions</div>
+        </div>
+        <div class="card" style="background: #8ee6fc;">
+          <div style="font-size:0.95em;font-weight:600;">Sensitive Query Ratio</div>
+          <div style="display:flex;align-items:flex-end;gap:8px;">
+            <span style="font-size:2rem;font-weight:bold;line-height:1.1;">15</span>
+            <span style="display:flex;align-items:center;font-size:0.95em;color:#888;margin-bottom:4px;gap:2px;">
+              <svg width="14" height="14" viewBox="0 0 20 20" fill="#ef4444" style="margin-right:2px;"><path d="M10 4v12M10 16l-5-5M10 16l5-5" stroke="#ef4444" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"/></svg>-1.1%</span>
+          </div>
+          <div style="font-size:0.85em;color:#0b5c6c;">% queries on sensitive data</div>
+        </div>
+        <div class="card" style="background: #f8b5da;">
+          <div style="font-size:0.95em;font-weight:600;">After-hours Activity</div>
+          <div style="display:flex;align-items:flex-end;gap:8px;">
+            <span style="font-size:2rem;font-weight:bold;line-height:1.1;">2</span>
+            <span style="display:flex;align-items:center;font-size:0.95em;color:#888;margin-bottom:4px;gap:2px;">
+              <svg width="14" height="14" viewBox="0 0 20 20" fill="#10b981" style="margin-right:2px;"><path d="M10 16V4M10 4l-5 5M10 4l5 5" stroke="#10b981" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"/></svg>+0.8%</span>
+          </div>
+          <div style="font-size:0.85em;color:#a13c7c;">Events outside work hours</div>
+        </div>
+        <div class="card" style="background: #f0f7a4;">
+          <div style="font-size:0.95em;font-weight:600;">Failed Authentication Attempts</div>
+          <div style="display:flex;align-items:flex-end;gap:8px;">
+            <span style="font-size:2rem;font-weight:bold;line-height:1.1;">17</span>
+            <span style="display:flex;align-items:center;font-size:0.95em;color:#888;margin-bottom:4px;gap:2px;">
+              <svg width="14" height="14" viewBox="0 0 20 20" fill="#ef4444" style="margin-right:2px;"><path d="M10 4v12M10 16l-5-5M10 16l5-5" stroke="#ef4444" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"/></svg>-0.5%</span>
+          </div>
+          <div style="font-size:0.85em;color:#b1a800;">Last 24h</div>
+        </div>
+      </div>
+      <h2>Security report</h2>
+      <p>   </p>
+      <div class="dashboard-island" style="border: 1px solid #bac7db; border-radius: 12px; background: #ffffff; box-shadow: 0 4px 24px 0 rgba(56,189,248,0.08); padding: 32px 28px; margin-bottom: 32px;">
+        <div class="grid">
+          <div class="card" style="color: #000000;">Total Query Today<br><b>1,284</b></div>
+          <div class="card" style="color: #000000;">Recent Query<br><b>Last 5 mins</b></div>
+          <div class="card large">
+            <h3>Anomaly Users</h3>
+            <ul class="anomaly-users-list">
+              <li style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
+                <img src="./assets/user1.png" alt="EMP001" style="width:32px;height:32px;border-radius:50%;object-fit:cover;">
+                <div style="flex:1;">
+                  <div style="font-weight:bold;color: #000000;">Daniel Davis Scott</div>
+                  <div style="font-size:0.8em;color:#888;">Data Analyst</div>
+                </div>
+                <span style="font-weight:bold;color:#e11d48;">0.92</span>
+              </li>
+              <li style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
+                <img src="./assets/user2.png" alt="EMP014" style="width:32px;height:32px;border-radius:50%;object-fit:cover;">
+                <div style="flex:1;">
+                  <div style="font-weight:bold;color: #000000;">Marriot Haus Queen</div>
+                  <div style="font-size:0.8em;color:#888;">Data Scientist</div>
+                </div>
+                <span style="font-weight:bold;color:#e11d48;">0.88</span>
+              </li>
+              <li style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
+                <img src="./assets/user3.png" alt="EMP014" style="width:32px;height:32px;border-radius:50%;object-fit:cover;">
+                <div style="flex:1;">
+                  <div style="font-weight:bold;color: #000000;">Cristian David</div>
+                  <div style="font-size:0.8em;color:#888;">Data Engineer</div>
+                </div>
+                <span style="font-weight:bold;color:#58e11d;">0.0012</span>
+              </li>
+              <li style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
+                <img src="./assets/user4.png" alt="EMP014" style="width:32px;height:32px;border-radius:50%;object-fit:cover;">
+                <div style="flex:1;">
+                  <div style="font-weight:bold;color: #000000;">Lionel Junior</div>
+                  <div style="font-size:0.8em;color:#888;">Service</div>
+                </div>
+                <span style="font-weight:bold;color:#58e11d;">0.0002</span>
+              </li>
+              <li style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
+                <img src="./assets/user5.png" alt="EMP014" style="width:32px;height:32px;border-radius:50%;object-fit:cover;">
+                <div style="flex:1;">
+                  <div style="font-weight:bold;color: #000000;">Brian Steven</div>
+                  <div style="font-size:0.8em;color:#888;">DB Admin</div>
+                </div>
+                <span style="font-weight:bold;color:#dee11d;">0.2004</span>
+              </li>
+              <li style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
+                <img src="./assets/user6.png" alt="EMP014" style="width:32px;height:32px;border-radius:50%;object-fit:cover;">
+                <div style="flex:1;">
+                  <div style="font-weight:bold;color: #000000;">Helios Marry</div>
+                  <div style="font-size:0.8em;color:#888;">DB Admin</div>
+                </div>
+                <span style="font-weight:bold;color:#dee11d;">0.102</span>
+              </li>
+            </ul>
+          </div>
+          <div class="card" style="color: #000000;">Total Events<br><b>18,244</b></div>
+          <div class="card" style="color: #000000;">Avg Risk<br><b style="color: #fec807;">0.41</b></div>
+          <div class="card wide" style="background: #ffffff;">
+            <div style="font-size:1em;font-weight:600;text-align:center;margin-bottom:8px;">Top User Queries</div>
+            <div style="display:flex;justify-content:center;align-items:center;">
+              <canvas id="userQueryChart" width="600" height="110" style="margin:0 auto;display:block;max-width:100%"></canvas>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+    <!-- DETECT -->
+    <section id="detect" class="page">
+      <div class="detect-header-bar" style="display:flex;align-items:center;justify-content:space-between;gap:24px;margin-bottom:24px;background:#ffffff;border-radius:16px;padding:20px 32px;box-shadow:0 2px 12px #0002;min-height:72px;">
+        <!-- Avatar/Logo left -->
+        <div style="flex-shrink:0;display:flex;align-items:center;justify-content:center;width:56px;height:56px;background:#232733;border-radius:50%;overflow:hidden;margin-right:20px;">
+          <img src="./assets/ML.png" alt="Logo" style="width:60px;height:60px;object-fit:fill;" />
+        </div>
+        <!-- Title & description center -->
+        <div style="flex:1;min-width:0;display:flex;flex-direction:column;align-items:flex-start;justify-content:center;">
+          <h2 class="detect-title" style="font-size:1.5rem;margin:0 0 2px 0;color:#000000;white-space:nowrap;">UEBA Detection</h2>
+          <div style="font-size:1rem;color:#828282;line-height:1.2;max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">Detect abnormal user behavior in your database system</div>
+        </div>
+        <!-- Buttons right -->
+        <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;">
+          <button id="detectBtn" class="detect-btn" style="background:#ff7a1a;color:#fff;border:none;padding:10px 22px;border-radius:8px;font-weight:600;font-size:1rem;box-shadow:0 2px 8px #0001;transition:background 0.2s;">Run Detection</button>
+          <button id="reportBtn" class="report-btn" style="background:#232733;color:#fff;border:none;padding:10px 18px;border-radius:8px;font-weight:500;font-size:1rem;">Export Report by ML</button>
+        </div>
+      </div>
+      <div class="detect-section">
+        <span id="status" class="detect-status" style="margin-left:10px;color:#4a4a4a;font-size:1rem;"></span>
+        <div id="progressBarContainer" style="width:100%;height:18px;background:#1e293b;border-radius:8px;overflow:hidden;display:none;margin-top:10px;">
+          <div id="progressBar" style="height:100%;width:0%;background:#38bdf8;transition:width 0.2s;"></div>
+        </div>
+        <div style="overflow-x:auto;">
+          <div class="result-cards-outer-card" id="resultCardsOuter" style="display:none;">
+            <div id="resultCards" style="display:none;gap:20px;flex-wrap:wrap;justify-content:center;margin-top:0;"></div>
+          </div>
+        </div>
+      </div>
+    </section>
+    <!-- EMPLOYEE -->
+    <section id="employee" class="page">
+      <h2>Employee Management</h2>
+      <p>(Future feature)</p>
+    </section>
+    <!-- DATABASE -->
+    <section id="database" class="page">
+      <h2>Database Management</h2>
+      <p>(Future feature)</p>
+    </section>
+  </main>
+</div>
+
+
+<script src="main.js"></script>
+</body>
+
+</body>
+</html>

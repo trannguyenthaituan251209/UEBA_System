@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <title>UEBA Anomaly Detection</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: #0f172a;
+            color: #e5e7eb;
+            padding: 30px;
+        }
+
+        h1 {
+            margin-bottom: 10px;
+        }
+
+        button {
+            padding: 12px 24px;
+            font-size: 16px;
+            background: #22c55e;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            color: #022c22;
+        }
+
+        button:hover {
+            background: #16a34a;
+        }
+
+        .summary {
+            margin-top: 20px;
+            font-size: 16px;
+        }
+
+        table {
+            width: 100%;
+            margin-top: 20px;
+            border-collapse: collapse;
+            background: #020617;
+        }
+
+        th, td {
+            padding: 10px;
+            border-bottom: 1px solid #1e293b;
+            text-align: center;
+        }
+
+        th {
+            background: #020617;
+            color: #38bdf8;
+        }
+
+        tr.anomaly {
+            background: rgba(220, 38, 38, 0.2);
+        }
+
+        .loading {
+            margin-top: 15px;
+            color: #fffb03;
+        }
+        .status-success {
+            color: #22c55e !important;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+
+<h1>UEBA Anomaly Detection Dashboard</h1>
+<p>Click Detect to scan database activity using ML</p>
+
+<button onclick="runDetection()">Detect</button>
+
+<div id="status" class="loading"></div>
+<div id="progressBarContainer" style="width:100%;height:18px;background:#1e293b;border-radius:8px;overflow:hidden;display:none;margin-top:10px;">
+    <div id="progressBar" style="height:100%;width:0%;background:#38bdf8;transition:width 0.2s;"></div>
+</div>
+<div id="summary" class="summary"></div>
+
+<table id="resultTable" style="display:none;">
+    <thead>
+        <tr>
+            <th>EmployeeID</th>
+            <th>Time</th>
+            <th>Hour</th>
+            <th>Queries</th>
+            <th>Rows</th>
+            <th>Sensitive %</th>
+            <th>Failed Login</th>
+            <th>Anomaly Score</th>
+        </tr>
+    </thead>
+    <tbody></tbody>
+</table>
+
+<script>
+async function runDetection() {
+    const status = document.getElementById("status");
+    const summary = document.getElementById("summary");
+    const table = document.getElementById("resultTable");
+    const tbody = table.querySelector("tbody");
+    const progressBar = document.getElementById("progressBar");
+    const progressBarContainer = document.getElementById("progressBarContainer");
+
+    status.innerText = "Running ML detection...";
+    summary.innerText = "";
+    tbody.innerHTML = "";
+    table.style.display = "none";
+    progressBar.style.width = "0%";
+    progressBarContainer.style.display = "block";
+
+    // Nếu server hỗ trợ SSE progress
+    let completed = false;
+    try {
+        if (!!window.EventSource) {
+            const evtSource = new EventSource("http://127.0.0.1:8000/ueba/detect/progress");
+            evtSource.onmessage = function(event) {
+                let msg = JSON.parse(event.data);
+                if (msg.progress !== undefined) {
+                    progressBar.style.width = msg.progress + "%";
+                    status.innerText = msg.status || ("Progress: " + msg.progress + "%");
+                }
+                if (msg.done) {
+                    evtSource.close();
+                    completed = true;
+                    fetchResult();
+                }
+            };
+            evtSource.onerror = function() {
+                evtSource.close();
+                if (!completed) {
+                    status.innerText = "Failed to get progress";
+                    progressBarContainer.style.display = "none";
+                }
+            };
+        } else {
+            // Fallback nếu không có SSE
+            await fetchResult();
+        }
+    } catch (err) {
+        status.innerText = "Failed to call API";
+        progressBarContainer.style.display = "none";
+        console.error(err);
+    }
+
+    async function fetchResult() {
+        try {
+            const res = await fetch("http://127.0.0.1:8000/ueba/detect");
+            const data = await res.json();
+            progressBar.style.width = "100%";
+            status.innerText = "Detection completed";
+            status.classList.add("status-success");
+            summary.innerHTML = `
+                <b>Total Rows:</b> ${data.total_rows} |
+                <b>Anomalies Detected:</b> ${data.anomalies}
+            `;
+            data.data.forEach(row => {
+                const tr = document.createElement("tr");
+                tr.classList.add("anomaly");
+                tr.innerHTML = `
+                    <td>${row.EmployeeID}</td>
+                    <td>${row.TimeBucket}</td>
+                    <td>${row.hour_of_day}</td>
+                    <td>${row.query_count}</td>
+                    <td>${row.rows_returned_sum}</td>
+                    <td>${(row.sensitive_ratio * 100).toFixed(0)}%</td>
+                    <td>${row.failed_login_count}</td>
+                    <td>${row.anomaly_score.toFixed(3)}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+            table.style.display = "table";
+            setTimeout(() => progressBarContainer.style.display = "none", 1000);
+        } catch (err) {
+            status.innerText = "❌ Failed to call API";
+            progressBarContainer.style.display = "none";
+            console.error(err);
+        }
+    }
+}
+</script>
+
+</body>
+</html>
