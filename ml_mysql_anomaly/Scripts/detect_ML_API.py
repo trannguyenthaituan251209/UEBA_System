@@ -529,7 +529,7 @@ def get_anomaly_scores():
 #     except Exception as e:
 #         return {"success": False, "error": str(e)}
 
-# from fastapi import Request
+from fastapi import Request
 import requests
 
 @app.post("/ueba/export-pdf")
