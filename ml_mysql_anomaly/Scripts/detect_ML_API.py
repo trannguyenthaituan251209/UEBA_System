@@ -2,6 +2,10 @@ import sys, os
 sys.path.append(os.path.dirname(__file__))
 from db_connection import get_connection
 
+# Đường dẫn tuyệt đối tới thư mục gốc project (ml_mysql_anomaly)
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+DATA_PATH = os.path.join(BASE_DIR, "data", "supervised_querylogs.csv")
+
 from fastapi import FastAPI, Request, Body
 import pandas as pd
 import joblib
@@ -89,9 +93,8 @@ LEFT JOIN Employees e
 
 @app.get("/ueba/detect")
 def detect_anomalies():
-    time.sleep(3)
     conn = get_connection()
-    df = pd.read_csv("data/supervised_querylogs.csv").fillna(0)
+    df = pd.read_csv(DATA_PATH).fillna(0)
 
 
     df["hour_of_day"] = pd.to_datetime(df["QueryTime"]).dt.hour
@@ -402,12 +405,11 @@ def selfscore():
 #Test mô hình giám sát
 @app.get("/supervised/predict")
 def supervised_predict():
-    time.sleep(3)
     """API kiểm chứng mô hình supervised: dự đoán bất thường/bình thường trên dữ liệu hiện tại."""
     import joblib
     from sklearn.preprocessing import LabelEncoder
     # Đọc dữ liệu QueryLogs đã gán nhãn (hoặc lấy từ SQL nếu muốn)
-    df = pd.read_csv("data/supervised_querylogs.csv")
+    df = pd.read_csv(DATA_PATH)
     # Trích xuất đặc trưng số giống lúc train
     df["hour_of_day"] = pd.to_datetime(df["QueryTime"]).dt.hour
     df["is_after_hours"] = ((df["hour_of_day"] < 7) | (df["hour_of_day"] > 17)).astype(int)
@@ -461,12 +463,11 @@ def supervised_predict():
 
 @app.get("/ueba/scorechart")
 def get_anomaly_scores():
-    time.sleep(3)
     """API trả về danh sách anomaly_score cho toàn bộ dữ liệu để vẽ chart"""
     import joblib
     import numpy as np
     from sklearn.preprocessing import LabelEncoder
-    df = pd.read_csv("data/supervised_querylogs.csv")
+    df = pd.read_csv(DATA_PATH)
     df["hour_of_day"] = pd.to_datetime(df["QueryTime"]).dt.hour
     df["is_after_hours"] = ((df["hour_of_day"] < 7) | (df["hour_of_day"] > 17)).astype(int)
     le = LabelEncoder()
