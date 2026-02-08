@@ -1,25 +1,14 @@
 import os
-import pyodbc
+import pymssql
 
 def get_connection():
-    conn = pyodbc.connect(
-        f"DRIVER={{ODBC Driver 18 for SQL Server}};"
-        f"SERVER={os.environ['DB_SERVER']};"
-        f"DATABASE={os.environ['DB_NAME']};"
-        f"UID={os.environ['DB_USER']};"
-        f"PWD={os.environ['DB_PASSWORD']};"
-        "Encrypt=yes;"
-        "TrustServerCertificate=no;"
+    conn = pymssql.connect(
+        server=os.environ['DB_SERVER'],
+        user=os.environ['DB_USER'],
+        password=os.environ['DB_PASSWORD'],
+        database=os.environ['DB_NAME'],
+        port=1433  # hoặc port bạn dùng cho Azure SQL
     )
-    # conn = pyodbc.connect(
-    #     "DRIVER={ODBC Driver 18 for SQL Server};"
-    #     "SERVER=tcp:ueba-database.database.windows.net,1433;"
-    #     "DATABASE=free-sql-db-8454879;"
-    #     "UID=tuan251209;"
-    #     "PWD=Tuan1234@;"
-    #     "Encrypt=yes;"
-    #     "TrustServerCertificate=no;"
-    # )
     return conn
 
 
