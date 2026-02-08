@@ -18,6 +18,7 @@ app = FastAPI(title="UEBA Detection API")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
+        "https://ueba-system.onrender.com",
         "http://127.0.0.1:5500",
         "http://localhost:5500",
         "http://192.168.1.111:5500"
