@@ -3,10 +3,11 @@ import pyodbc
 def get_connection():
     conn = pyodbc.connect(
         "DRIVER={ODBC Driver 18 for SQL Server};"
-        "SERVER=localhost\\SQLEXPRESS;"
-        "DATABASE=AuthenticationManager;"
-        "Trusted_Connection=yes;"
-        "Encrypt=no;"
+        "SERVER=tcp:ueba-database.database.windows.net,1433;"
+        "DATABASE=free-sql-db-8454879;"
+        "UID=tuan251209;"
+        "PWD=Tuan1234@;"
+        "Encrypt=yes;"
         "TrustServerCertificate=yes;"
     )
     return conn

@@ -1,6 +1,9 @@
+import sys, os
+sys.path.append(os.path.dirname(__file__))
+from db_connection import get_connection
+
 from fastapi import FastAPI, Request, Body
 import pandas as pd
-from db_connection import get_connection
 import joblib
 from fastapi.middleware.cors import CORSMiddleware
 import time
