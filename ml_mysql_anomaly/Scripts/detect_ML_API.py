@@ -512,7 +512,7 @@ def get_anomaly_scores():
         "threshold": threshold,
         "data": result
     }
-from train_supervised import train_supervised_model
+from .train_supervised import train_supervised_model
 # --- API train supervised model trực tiếp từ web ---
 @app.post("/supervised/train")
 def train_supervised_api():
