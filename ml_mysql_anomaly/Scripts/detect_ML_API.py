@@ -512,24 +512,24 @@ def get_anomaly_scores():
         "threshold": threshold,
         "data": result
     }
-import sys, os
-sys.path.append(os.path.dirname(__file__))
-from train_supervised import train_supervised_model
-# --- API train supervised model trực tiếp từ web ---
-@app.post("/supervised/train")
-def train_supervised_api():
-    """API để train lại mô hình supervised, trả về kết quả cross-validation."""
-    try:
-        result = train_supervised_model()
-        return {
-            "success": True,
-            "mean_scores": result["mean_scores"],
-            "fold_scores": result["fold_scores"]
-        }
-    except Exception as e:
-        return {"success": False, "error": str(e)}
+# import sys, os
+# sys.path.append(os.path.dirname(__file__))
+# from train_supervised import train_supervised_model
+# # --- API train supervised model trực tiếp từ web ---
+# @app.post("/supervised/train")
+# def train_supervised_api():
+#     """API để train lại mô hình supervised, trả về kết quả cross-validation."""
+#     try:
+#         result = train_supervised_model()
+#         return {
+#             "success": True,
+#             "mean_scores": result["mean_scores"],
+#             "fold_scores": result["fold_scores"]
+#         }
+#     except Exception as e:
+#         return {"success": False, "error": str(e)}
 
-from fastapi import Request
+# from fastapi import Request
 import requests
 
 @app.post("/ueba/export-pdf")
