@@ -18,10 +18,16 @@ app = FastAPI(title="UEBA Detection API")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
-        "https://hatvaqua.online/",
-        "http://127.0.0.1:5500",
-        "http://localhost:5500",
-        "http://192.168.1.111:5500"
+    "https://hatvaqua.online/",
+    "https://ueba-system.onrender.com",
+    "https://ueba-system.onrender.com/",
+    "https://ueba-system.onrender.com:10000",
+    "https://ueba-system.onrender.com:10000/",
+    "https://ueba-system.onrender.com:443",
+    "https://ueba-system.onrender.com:443/",
+    "http://127.0.0.1:5500",
+    "http://localhost:5500",
+    "http://192.168.1.111:5500"
     ],
     allow_credentials=True,
     allow_methods=["*"],
