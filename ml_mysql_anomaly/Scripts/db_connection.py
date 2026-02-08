@@ -10,7 +10,14 @@ def get_connection():
         port=1433  # hoặc port bạn dùng cho Azure SQL
     )
     return conn
-
+    # conn = pymssql.connect(
+    #     server="ueba-database.database.windows.net",
+    #     user="tuan2509",
+    #     password="Tuan1234@",
+    #     database="free-sql-db-8454879",
+    #     port=1433
+    # )
+    # return conn
 
 try:
     conn = get_connection()
