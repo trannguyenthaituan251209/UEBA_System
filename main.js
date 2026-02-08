@@ -31,7 +31,7 @@ async function renderAnomalyScoreChart() {
   ctx.clearRect(0, 0, parent.offsetWidth, parent.offsetHeight);
   // Fetch data
   try {
-    const res = await fetch('http://127.0.0.1:8000/ueba/scorechart','https://ueba-system.onrender.com/ueba/scorechart');
+    const res = await fetch('https://ueba-system.onrender.com/ueba/scorechart');
     const data = await res.json();
     const points = data.data || [];
     const threshold = data.threshold ?? 0.5;
@@ -319,7 +319,7 @@ async function renderMLDetect_DetectSection() {
       <div class="loader"></div>
     </div>`;
   try {
-    const res = await fetch('http://127.0.0.1:8000/ueba/detect','https://ueba-system.onrender.com/ueba/detect');
+    const res = await fetch('https://ueba-system.onrender.com/ueba/detect');
     const data = await res.json();
     window.lastDetectJson = data;
     if (exportBtn) {
@@ -558,7 +558,7 @@ document.addEventListener('DOMContentLoaded', function() {
       try {
         // Lấy JSON detect đã lưu trước đó
         const detectJson = window.lastDetectJson || {};
-        const res = await fetch('http://127.0.0.1:8000/ueba/export-pdf','https://ueba-system.onrender.com/ueba/export-pdf', {
+        const res = await fetch('https://ueba-system.onrender.com/ueba/export-pdf', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(detectJson)
