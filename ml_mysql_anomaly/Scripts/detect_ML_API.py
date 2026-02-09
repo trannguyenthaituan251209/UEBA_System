@@ -579,12 +579,17 @@ async def export_pdf_from_data(request: Request, data: Dict[str, Any] = Body(...
         pdf.set_auto_page_break(auto=True, margin=15)
         pdf.add_page()
         # Add custom font (assume font file is in assets/fonts/YourFont.ttf)
-        font_path = os.path.join(os.path.dirname(__file__), '../../assets/fonts/SourceCodePro-VariableFont_wght.ttf')
+        font_path = os.path.join(BASE_DIR, 'assets', 'fonts', 'SourceCodePro-VariableFont_wght.ttf')
         font_name = "CustomFont"
         if os.path.exists(font_path):
-            pdf.add_font(font_name, '', font_path, uni=True)
-            pdf.set_font(font_name, size=18)
+            try:
+                pdf.add_font(font_name, '', font_path, uni=True)
+                pdf.set_font(font_name, size=18)
+            except Exception as font_err:
+                print(f"[EXPORT PDF] Font load error: {font_err}. Fallback to Arial.")
+                pdf.set_font("Arial", style="B", size=18)
         else:
+            print(f"[EXPORT PDF] Font file not found: {font_path}. Fallback to Arial.")
             pdf.set_font("Arial", style="B", size=18)
         # Logo (bên trái)
         logo_path = os.path.join(os.path.dirname(__file__), '../../assets/UEBA SYSTEM.png')
@@ -595,7 +600,10 @@ async def export_pdf_from_data(request: Request, data: Dict[str, Any] = Body(...
         pdf.cell(0, 12, "UEBA-MLVer1 (BETA) REPORT", ln=2, align="L")
         # Tiêu đề phụ
         if os.path.exists(font_path):
-            pdf.set_font(font_name, size=11)
+            try:
+                pdf.set_font(font_name, size=11)
+            except Exception:
+                pdf.set_font("Arial", size=11)
         else:
             pdf.set_font("Arial", size=11)
         pdf.set_text_color(120,120,120)
@@ -610,9 +618,12 @@ async def export_pdf_from_data(request: Request, data: Dict[str, Any] = Body(...
         pdf.ln(6)
         # Thông tin tổng quan
         if os.path.exists(font_path):
-            pdf.set_font(font_name, size=8)
+            try:
+                pdf.set_font(font_name, size=8)
+            except Exception:
+                pdf.set_font("Arial", size=8)
         else:
-            font_path = os.path.join(BASE_DIR, 'assets', 'fonts', 'SourceCodePro-VariableFont_wght.ttf')
+            pdf.set_font("Arial", size=8)
         # Thông tin IP và vị trí
         ip_str = f"Client IP: {client_ip or '--'}"
         if is_local:
@@ -636,7 +647,10 @@ async def export_pdf_from_data(request: Request, data: Dict[str, Any] = Body(...
         pdf.ln(2)
         # Table header
         if os.path.exists(font_path):
-            pdf.set_font(font_name, size=8)
+            try:
+                pdf.set_font(font_name, size=8)
+            except Exception:
+                pdf.set_font("Arial", size=7)
         else:
             pdf.set_font("Arial", size=7)
         col_widths = [15, 48, 18, 13, 18, 18, 18, 15, 18]
@@ -645,7 +659,10 @@ async def export_pdf_from_data(request: Request, data: Dict[str, Any] = Body(...
             logo_path = os.path.join(BASE_DIR, 'assets', 'UEBA SYSTEM.png')
         pdf.ln()
         if os.path.exists(font_path):
-            pdf.set_font(font_name, size=9)
+            try:
+                pdf.set_font(font_name, size=9)
+            except Exception:
+                pdf.set_font("Arial", size=9)
         else:
             pdf.set_font("Arial", size=9)
         for row in anomalies[:30]:
@@ -676,7 +693,10 @@ async def export_pdf_from_data(request: Request, data: Dict[str, Any] = Body(...
         pdf.ln(2)
         # Notice cuối
         if os.path.exists(font_path):
-            pdf.set_font(font_name, size=8)
+            try:
+                pdf.set_font(font_name, size=8)
+            except Exception:
+                pdf.set_font("Arial", style="B", size=8)
         else:
             pdf.set_font("Arial", style="B", size=8)
         pdf.set_text_color(220, 0, 0)
@@ -685,12 +705,18 @@ async def export_pdf_from_data(request: Request, data: Dict[str, Any] = Body(...
         pdf.ln(2)
         # Mô tả hệ thống ML
         if os.path.exists(font_path):
-            pdf.set_font(font_name, size=14)
+            try:
+                pdf.set_font(font_name, size=14)
+            except Exception:
+                pdf.set_font("Arial", style="B", size=14)
         else:
             pdf.set_font("Arial", style="B", size=14)
         pdf.cell(0, 8, "About UEBA-MLVer1 (BETA)", ln=1, align="L")
         if os.path.exists(font_path):
-            pdf.set_font(font_name, size=10)
+            try:
+                pdf.set_font(font_name, size=10)
+            except Exception:
+                pdf.set_font("Arial", size=10)
         else:
             pdf.set_font("Arial", size=10)
         ml_desc = (
@@ -704,7 +730,10 @@ async def export_pdf_from_data(request: Request, data: Dict[str, Any] = Body(...
         pdf.multi_cell(0, 7, ml_desc, align="L")
         pdf.ln(2)
         if os.path.exists(font_path):
-            pdf.set_font(font_name, size=12)
+            try:
+                pdf.set_font(font_name, size=12)
+            except Exception:
+                pdf.set_font("Arial", style="B", size=12)
         else:
             pdf.set_font("Arial", style="B", size=12)
         pdf.cell(0, 8, "--THE END--", ln=1, align="C")
