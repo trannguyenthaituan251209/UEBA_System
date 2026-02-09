@@ -612,7 +612,7 @@ async def export_pdf_from_data(request: Request, data: Dict[str, Any] = Body(...
         if os.path.exists(font_path):
             pdf.set_font(font_name, size=8)
         else:
-            pdf.set_font("Arial", size=8)
+            font_path = os.path.join(BASE_DIR, 'assets', 'fonts', 'SourceCodePro-VariableFont_wght.ttf')
         # Thông tin IP và vị trí
         ip_str = f"Client IP: {client_ip or '--'}"
         if is_local:
@@ -642,7 +642,7 @@ async def export_pdf_from_data(request: Request, data: Dict[str, Any] = Body(...
         col_widths = [15, 48, 18, 13, 18, 18, 18, 15, 18]
         headers = ["EmpID", "QueryTime", "Score", "Anom", "RowsEx", "RowsRet", "ExecT", "QType", "LogID"]
         for i, h in enumerate(headers):
-            pdf.cell(col_widths[i], 8, h, 1, 0, 'C')
+            logo_path = os.path.join(BASE_DIR, 'assets', 'UEBA SYSTEM.png')
         pdf.ln()
         if os.path.exists(font_path):
             pdf.set_font(font_name, size=9)
