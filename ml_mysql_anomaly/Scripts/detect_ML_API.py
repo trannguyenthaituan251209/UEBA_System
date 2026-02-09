@@ -579,7 +579,7 @@ async def export_pdf_from_data(request: Request, data: Dict[str, Any] = Body(...
         pdf.set_auto_page_break(auto=True, margin=15)
         pdf.add_page()
         # Add custom font (assume font file is in assets/fonts/YourFont.ttf)
-        font_path = os.path.join(BASE_DIR, 'assets', 'fonts', 'SourceCodePro-VariableFont_wght.ttf')
+        font_path = os.path.join(BASE_DIR, '..', 'assets', 'fonts', 'SourceCodePro-VariableFont_wght.ttf')
         font_name = "CustomFont"
         if os.path.exists(font_path):
             try:
@@ -656,7 +656,7 @@ async def export_pdf_from_data(request: Request, data: Dict[str, Any] = Body(...
         col_widths = [15, 48, 18, 13, 18, 18, 18, 15, 18]
         headers = ["EmpID", "QueryTime", "Score", "Anom", "RowsEx", "RowsRet", "ExecT", "QType", "LogID"]
         for i, h in enumerate(headers):
-            logo_path = os.path.join(BASE_DIR, 'assets', 'UEBA SYSTEM.png')
+            logo_path = os.path.join(BASE_DIR, '..', 'assets', 'UEBA SYSTEM.png')
         pdf.ln()
         if os.path.exists(font_path):
             try:
