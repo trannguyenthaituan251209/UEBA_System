@@ -5,6 +5,10 @@ from db_connection import get_connection
 # Đường dẫn tuyệt đối tới thư mục gốc project (ml_mysql_anomaly)
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 DATA_PATH = os.path.join(BASE_DIR, "data", "supervised_querylogs.csv")
+MODEL_DIR = os.path.join(BASE_DIR, "model")
+IFOREST_PATH = os.path.join(MODEL_DIR, "iforest.pkl")
+SCALER_PATH = os.path.join(MODEL_DIR, "scaler.pkl")
+RF_SUPERVISED_PATH = os.path.join(MODEL_DIR, "rf_supervised.pkl")
 
 from fastapi import FastAPI, Request, Body
 import pandas as pd
@@ -38,8 +42,8 @@ app.add_middleware(
 # UEBADetector chỉ nạp model/scaler từ file .pkl đã huấn luyện sẵn
 class UEBADetector:
     def __init__(self):
-        self.model = joblib.load("model/iforest.pkl")
-        self.scaler = joblib.load("model/scaler.pkl")
+        self.model = joblib.load(IFOREST_PATH)
+        self.scaler = joblib.load(SCALER_PATH)
 
     def detect(self, df):
 
@@ -112,7 +116,7 @@ def detect_anomalies():
 
     # Load mô hình supervised
     import joblib
-    clf = joblib.load("model/rf_supervised.pkl")
+    clf = joblib.load(RF_SUPERVISED_PATH)
     y_pred = clf.predict(X)
     df["anomaly_score"] = clf.predict_proba(X)[:, 1] if hasattr(clf, "predict_proba") else y_pred
     df["is_anomaly"] = y_pred
@@ -377,9 +381,8 @@ def selfscore():
     for col in ["query_count", "rows_returned_sum", "avg_execution_time", "max_execution_time", "sensitive_query_count", "unique_ip_count", "failed_login_count"]:
         if col in X.columns:
             X[col] = np.log1p(X[col])
-    from joblib import load
-    model = load("model/iforest.pkl")
-    scaler = load("model/scaler.pkl")
+    model = load(IFOREST_PATH)
+    scaler = load(SCALER_PATH)
     X_scaled = scaler.transform(X)
     anomaly_score = model.decision_function(X_scaled)
     is_anomaly = model.predict(X_scaled)
@@ -420,7 +423,7 @@ def supervised_predict():
     ]
     X = df[features].fillna(0)
     # Load model
-    clf = joblib.load("model/rf_supervised.pkl")
+    clf = joblib.load(RF_SUPERVISED_PATH)
     y_pred = clf.predict(X)
     # Ép kiểu predicted_label về int Python
     df["predicted_label"] = [int(x) for x in y_pred]
@@ -476,7 +479,7 @@ def get_anomaly_scores():
         "hour_of_day", "is_after_hours", "RowsExamined", "RowsReturned", "ExecutionTime", "QueryLength", "IsSensitive", "query_type"
     ]
     X = df[features].fillna(0)
-    clf = joblib.load("model/rf_supervised.pkl")
+    clf = joblib.load(RF_SUPERVISED_PATH)
     # Lấy xác suất anomaly nếu có, nếu không thì lấy nhãn dự đoán
     if hasattr(clf, "predict_proba"):
         scores = clf.predict_proba(X)[:, 1]
