@@ -1,3 +1,4 @@
+
 import sys, os
 sys.path.append(os.path.dirname(__file__))
 from db_connection import get_connection
@@ -178,80 +179,7 @@ def detect_anomalies():
         ]
     }
 
-@app.get("/ueba/explain")
-def explain_anomalies():
-    """API trả về context đánh giá được generate bởi ML, luôn trả về top 10 anomaly_score thấp nhất"""
-    conn = get_connection()
-    df = pd.read_sql(SQL, conn).fillna(0)
 
-    detector = UEBADetector()
-    # Tính anomaly_score cho toàn bộ dữ liệu (không lọc theo predict)
-
-    features = [
-        "hour_of_day",
-        "query_count",
-        "rows_returned_sum",
-        "avg_execution_time",
-        "max_execution_time",
-        "sensitive_query_count",
-        "sensitive_ratio",
-        "unique_ip_count",
-        "failed_login_count"
-    ]
-    for col in features:
-        if col not in df.columns:
-            df[col] = 0
-    X = df[features].fillna(0).copy()
-    import numpy as np
-    for col in ["query_count", "rows_returned_sum", "avg_execution_time", "max_execution_time", "sensitive_query_count", "unique_ip_count", "failed_login_count"]:
-        if col in X.columns:
-            X[col] = np.log1p(X[col])
-    X_scaled = detector.scaler.transform(X)
-    df["anomaly_score"] = detector.model.decision_function(X_scaled)
-
-
-    # Ghi log toàn bộ anomaly_score và EmployeeID để kiểm tra
-    print("==== DEBUG: anomaly_score by EmployeeID ====")
-    for idx, row in df.iterrows():
-        print(f"EmployeeID: {row['EmployeeID']}, anomaly_score: {row['anomaly_score']}")
-    print("==== END DEBUG ====")
-
-    # Lấy top 10 anomaly_score thấp nhất
-    top_anomalies = df.sort_values("anomaly_score").head(10)
-
-    explanations = []
-    for _, row in top_anomalies.iterrows():
-        row = row if isinstance(row, pd.Series) else pd.Series(row)
-        full_name = str(row.get("FullName", ""))
-        role = str(row.get("Role", ""))
-        avatar_url = str(row.get("avatar_url", ""))
-        anomaly_score = float(row["anomaly_score"])
-        risk_level = (
-            "HIGH" if anomaly_score < -0.19 else
-            "MEDIUM" if anomaly_score < -0.1 else
-            "LOW"
-        )
-        explanation_obj = detector.generate_explanation(row)
-        explanation = explanation_obj["explanation"] if isinstance(explanation_obj, dict) else str(explanation_obj)
-        explanations.append({
-            "employee_id": int(row["EmployeeID"]),
-            "full_name": full_name,
-            "role": role,
-            "avatar_url": avatar_url,
-            "anomaly_score": anomaly_score,
-            "risk_level": risk_level,
-            "explanation": explanation
-        })
-
-    return {
-        "explanations": explanations,
-        "anomalies_found": len(explanations),
-        "summary": {
-            "high_risk": sum(1 for e in explanations if e["risk_level"] == "HIGH"),
-            "medium_risk": sum(1 for e in explanations if e["risk_level"] == "MEDIUM"),
-            "low_risk": sum(1 for e in explanations if e["risk_level"] == "LOW"),
-        }
-    }
 
 # SSE endpoint trả tiến trình thật
 @app.get("/ueba/detect/progress")
@@ -306,106 +234,6 @@ async def detect_progress(request: Request):
     import asyncio
     return StreamingResponse(event_generator(), media_type="text/event-stream")
 
-@app.get("/ueba/evaluate")
-def evaluate_ml():
-    """Endpoint trả về self-evaluation của mô hình ML: accuracy, precision, recall, f1-score"""
-    conn = get_connection()
-    # Lấy features
-    df = pd.read_sql(SQL, conn).fillna(0)
-    # Lấy nhãn từ bảng AnomalyLabels (giả sử EmployeeID và TimeBucket mapping với QueryTime)
-    label_sql = """
-    SELECT EmployeesID, is_abnomaly AS label
-    FROM AbnomalyLabels
-    WHERE is_abnomaly IS NOT NULL
-    """
-    labels = pd.read_sql(label_sql, conn)
-    # Gộp nhãn vào features chỉ theo EmployeeID
-    df = df.merge(labels, left_on=["EmployeeID"], right_on=["EmployeesID"], how="left")
-    df["label"] = df["label"].fillna(0).astype(int)
-
-    # Dự đoán của mô hình
-    detector = UEBADetector()
-    features = [
-        "hour_of_day",
-        "query_count",
-        "rows_returned_sum",
-        "avg_execution_time",
-        "max_execution_time",
-        "sensitive_query_count",
-        "sensitive_ratio",
-        "unique_ip_count",
-        "failed_login_count"
-    ]
-    X = df[features]
-    X_scaled = detector.scaler.transform(X)
-    y_pred = detector.model.predict(X_scaled)
-    # Isolation Forest: -1 là bất thường, 1 là bình thường
-    y_pred = (y_pred == -1).astype(int)
-    y_true = df["label"].values
-
-    accuracy = accuracy_score(y_true, y_pred)
-    precision = precision_score(y_true, y_pred, zero_division=0)
-    recall = recall_score(y_true, y_pred, zero_division=0)
-    f1 = f1_score(y_true, y_pred, zero_division=0)
-
-    return {
-        "accuracy": accuracy,
-        "precision": precision,
-        "recall": recall,
-        "f1_score": f1,
-        "total_samples": int(len(y_true)),
-        "anomaly_labeled": int(sum(y_true)),
-        "anomaly_predicted": int(sum(y_pred))
-    }
-@app.get("/ueba/selfscore")
-def selfscore():
-    """Endpoint trả về các chỉ số nội tại của Isolation Forest không dùng nhãn."""
-    conn = get_connection()
-    df = pd.read_sql(SQL, conn).fillna(0)
-    features = [
-        "hour_of_day",
-        "query_count",
-        "rows_returned_sum",
-        "avg_execution_time",
-        "max_execution_time",
-        "sensitive_query_count",
-        "sensitive_ratio",
-        "unique_ip_count",
-        "failed_login_count"
-    ]
-    for col in features:
-        if col not in df.columns:
-            df[col] = 0
-    X = df[features].fillna(0).copy()
-    import numpy as np
-    for col in ["query_count", "rows_returned_sum", "avg_execution_time", "max_execution_time", "sensitive_query_count", "unique_ip_count", "failed_login_count"]:
-        if col in X.columns:
-            X[col] = np.log1p(X[col])
-    model = load(IFOREST_PATH)
-    scaler = load(SCALER_PATH)
-    X_scaled = scaler.transform(X)
-    anomaly_score = model.decision_function(X_scaled)
-    is_anomaly = model.predict(X_scaled)
-    anomaly_rate = float((is_anomaly == -1).sum()) / len(is_anomaly)
-    score_stats = {
-        "min": float(np.min(anomaly_score)),
-        "max": float(np.max(anomaly_score)),
-        "mean": float(np.mean(anomaly_score)),
-        "std": float(np.std(anomaly_score)),
-        "25%": float(np.percentile(anomaly_score, 25)),
-        "50%": float(np.percentile(anomaly_score, 50)),
-        "75%": float(np.percentile(anomaly_score, 75))
-    }
-    # Top 10 outlier
-    top_idx = np.argsort(anomaly_score)[:10]
-    top_outlier = df.iloc[top_idx][["EmployeeID", "hour_of_day", "query_count"]].copy()
-    top_outlier["anomaly_score"] = anomaly_score[top_idx]
-    return {
-        "anomaly_rate": anomaly_rate,
-        "score_stats": score_stats,
-        "top_outlier": top_outlier.to_dict(orient="records")
-    }
-#Test mô hình giám sát
 @app.get("/supervised/predict")
 def supervised_predict():
     """API kiểm chứng mô hình supervised: dự đoán bất thường/bình thường trên dữ liệu hiện tại."""
@@ -543,6 +371,7 @@ import requests
 @app.post("/ueba/export-pdf")
 async def export_pdf_from_data(request: Request, data: Dict[str, Any] = Body(...)):
     """API để xuất báo cáo PDF từ dữ liệu anomaly đã detect (frontend gửi lên), kèm IP và vị trí client."""
+    print("[EXPORT PDF] Input data:", data)
     try:
         # Lấy IP client
         client_ip = request.client.host if request.client else None
@@ -750,3 +579,84 @@ async def export_pdf_from_data(request: Request, data: Dict[str, Any] = Body(...
     except Exception as e:
         from fastapi.responses import JSONResponse
         return JSONResponse(content={"success": False, "error": str(e)})
+    # Dashboard summary endpoint
+
+# Dashboard summary endpoint (tổng hợp toàn bộ lịch sử)
+@app.get("/dashboard/summary")
+def dashboard_summary():
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    # Tổng số truy vấn toàn bộ lịch sử
+    cursor.execute("SELECT COUNT(*) FROM QueryLogs")
+    total_query_all = cursor.fetchone()[0]
+
+    # Tổng số RowsExamined toàn bộ lịch sử
+    cursor.execute("SELECT SUM(RowsExamined) FROM QueryLogs")
+    total_rows_examined = cursor.fetchone()[0] or 0
+
+    # Tổng số truy vấn ngoài giờ toàn bộ lịch sử (giả sử ngoài 7h-17h)
+    cursor.execute("SELECT COUNT(*) FROM QueryLogs WHERE (DATEPART(HOUR, QueryTime) < 7 OR DATEPART(HOUR, QueryTime) > 17)")
+    after_hours_all = cursor.fetchone()[0]
+
+    # Tổng số lần đăng nhập thất bại toàn bộ lịch sử
+    cursor.execute("SELECT COUNT(*) FROM AuthenticationLogs WHERE LoginStatus='FAIL'")
+    failed_auth_all = cursor.fetchone()[0]
+
+    # Tổng số sự kiện (QueryLogs + AuthenticationLogs)
+    cursor.execute("SELECT COUNT(*) FROM AuthenticationLogs")
+    total_auth = cursor.fetchone()[0]
+    total_events = total_query_all + total_auth
+
+    # Top 1 nhân viên có nhiều truy vấn nhất
+    cursor.execute("SELECT TOP 1 EmployeeID, COUNT(*) AS cnt FROM QueryLogs GROUP BY EmployeeID ORDER BY cnt DESC")
+    top_user = cursor.fetchone()
+    top_user_id = top_user[0] if top_user else None
+    top_user_count = top_user[1] if top_user else 0
+
+    return {
+        "total_query_all": total_query_all,
+        "total_rows_examined": total_rows_examined,
+        "after_hours_all": after_hours_all,
+        "failed_auth_all": failed_auth_all,
+        "total_events": total_events,
+        "top_user_id": top_user_id,
+        "top_user_count": top_user_count
+    }
+
+import asyncio
+# SSE endpoint: Live log stream (monitor QueryLogs table for new entries)
+from fastapi.responses import StreamingResponse
+
+@app.get("/live-log-stream")
+async def live_log_stream():
+    async def event_generator():
+        last_log_id = None
+        while True:
+            try:
+                conn = get_connection()
+                cursor = conn.cursor()
+                # Lần đầu lấy log mới nhất để khởi tạo last_log_id
+                if last_log_id is None:
+                    cursor.execute("SELECT TOP 1 QueryLogID FROM QueryLogs ORDER BY QueryLogID DESC")
+                    row = cursor.fetchone()
+                    last_log_id = row[0] if row else 0
+                else:
+                    # Lấy tất cả log mới hơn last_log_id, theo thứ tự tăng dần
+                    cursor.execute("SELECT QueryLogID, EmployeeID, QueryTime, QueryType FROM QueryLogs WHERE QueryLogID > %s ORDER BY QueryLogID ASC", (last_log_id,))
+                    rows = cursor.fetchall()
+                    for log in rows:
+                        log_id, emp_id, q_time, q_type = log
+                        data = {
+                            "QueryLogID": log_id,
+                            "EmployeeID": emp_id,
+                            "QueryTime": str(q_time),
+                            "QueryType": q_type
+                        }
+                        yield f"data: {json.dumps(data)}\n\n"
+                        last_log_id = log_id
+                await asyncio.sleep(1)
+            except Exception as e:
+                yield f"event: error\ndata: {str(e)}\n\n"
+                await asyncio.sleep(2)
+    return StreamingResponse(event_generator(), media_type="text/event-stream")

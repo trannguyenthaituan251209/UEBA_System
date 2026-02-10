@@ -2,6 +2,19 @@
 <html lang="en">
 <head>
     <style>
+      @font-face {
+        font-family: 'Code';
+        src: url('assets/fonts/SourceCodePro-VariableFont_wght.ttf') format('truetype');
+
+        font-weight: normal;
+        font-style: normal;
+        font-display: swap;
+      }
+      #live-log-terminal, #live-log-terminal * {
+        font-family: 'Fira Mono', 'Consolas', 'Menlo', 'Monaco', monospace !important;
+      }
+    </style>
+    <style>
       .sidebar-left ul li {
         font-family: 'Helve';
         color: #6e6d6d !important;
@@ -64,7 +77,7 @@
       </li>
       <li style="display:flex;align-items:center;gap:8px;">
         <button onclick="showPage('employee', event);" style="display:flex;align-items:center;gap:8px;width:100%;background:none;border:none;padding:0;margin:0;text-align:left;cursor:pointer;color:inherit;font:inherit;text-decoration:none;">
-          <img src="./assets/employee.png" alt="Employee" style="width:18px;height:18px;object-fit:contain;">Employee Manager
+          <img src="./assets/employee.png" alt="Employee" style="width:18px;height:18px;object-fit:contain;">User Risk Profiles 
         </button>
       </li>
       <li style="display:flex;align-items:center;gap:8px;">
@@ -114,110 +127,34 @@
         <p> </p>
       <div class="overview-row" style="display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:24px;">
         <div class="card" style="background: #f8c58e;">
-          <div style="font-size:0.95em;font-weight:600;">Active Database Session</div>
-          <div style="display:flex;align-items:flex-end;gap:8px;">
-            <span style="font-size:2rem;font-weight:bold;line-height:1.1;">244</span>
-            <span style="display:flex;align-items:center;font-size:0.95em;color:#888;margin-bottom:4px;gap:2px;">
-              <svg width="14" height="14" viewBox="0 0 20 20" fill="#10b981" style="margin-right:2px;"><path d="M10 16V4M10 4l-5 5M10 4l5 5" stroke="#10b981" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"/></svg>+4.2%</span>
-          </div>
+          <div style="font-size:0.95em;font-weight:600;">Total Query All</div>
+          <div style="font-size:2rem;font-weight:bold;line-height:1.1;color: #7c5a00;" id="total_query_all">--</div>
           <div style="font-size:0.85em;color:#7c5a00;">Current active sessions</div>
         </div>
         <div class="card" style="background: #8ee6fc;">
-          <div style="font-size:0.95em;font-weight:600;">Sensitive Query Ratio</div>
-          <div style="display:flex;align-items:flex-end;gap:8px;">
-            <span style="font-size:2rem;font-weight:bold;line-height:1.1;">15</span>
-            <span style="display:flex;align-items:center;font-size:0.95em;color:#888;margin-bottom:4px;gap:2px;">
-              <svg width="14" height="14" viewBox="0 0 20 20" fill="#ef4444" style="margin-right:2px;"><path d="M10 4v12M10 16l-5-5M10 16l5-5" stroke="#ef4444" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"/></svg>-1.1%</span>
-          </div>
+          <div style="font-size:0.95em;font-weight:600;">Total Row Examined</div>
+          <div style="font-size:2rem;font-weight:bold;line-height:1.1;color: #007c7c;" id="total_rows_examined">--</div>
           <div style="font-size:0.85em;color:#0b5c6c;">% queries on sensitive data</div>
         </div>
         <div class="card" style="background: #f8b5da;">
-          <div style="font-size:0.95em;font-weight:600;">After-hours Activity</div>
-          <div style="display:flex;align-items:flex-end;gap:8px;">
-            <span style="font-size:2rem;font-weight:bold;line-height:1.1;">2</span>
-            <span style="display:flex;align-items:center;font-size:0.95em;color:#888;margin-bottom:4px;gap:2px;">
-              <svg width="14" height="14" viewBox="0 0 20 20" fill="#10b981" style="margin-right:2px;"><path d="M10 16V4M10 4l-5 5M10 4l5 5" stroke="#10b981" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"/></svg>+0.8%</span>
-          </div>
+          <div style="font-size:0.95em;font-weight:600;">Total events</div>
+          <div style="font-size:2rem;font-weight:bold;line-height:1.1;color: #780148;" id="total_events">--</div>
           <div style="font-size:0.85em;color:#a13c7c;">Events outside work hours</div>
         </div>
         <div class="card" style="background: #f0f7a4;">
           <div style="font-size:0.95em;font-weight:600;">Failed Authentication Attempts</div>
-          <div style="display:flex;align-items:flex-end;gap:8px;">
-            <span style="font-size:2rem;font-weight:bold;line-height:1.1;">17</span>
-            <span style="display:flex;align-items:center;font-size:0.95em;color:#888;margin-bottom:4px;gap:2px;">
-              <svg width="14" height="14" viewBox="0 0 20 20" fill="#ef4444" style="margin-right:2px;"><path d="M10 4v12M10 16l-5-5M10 16l5-5" stroke="#ef4444" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"/></svg>-0.5%</span>
-          </div>
+          <div style="font-size:2rem;font-weight:bold;line-height:1.1;color: #7c7c00;" id="failed_auth_all">--</div>
           <div style="font-size:0.85em;color:#b1a800;">Last 24h</div>
         </div>
       </div>
-      <h2>Security report</h2>
+      <h2>Activity Log</h2>
       <p>   </p>
-      <div class="dashboard-island" style="border: 1px solid #bac7db; border-radius: 12px; background: #ffffff; box-shadow: 0 4px 24px 0 rgba(56,189,248,0.08); padding: 32px 28px; margin-bottom: 32px;">
-        <div class="grid">
-          <div class="card" style="color: #000000;">Total Query Today<br><b>1,284</b></div>
-          <div class="card" style="color: #000000;">Recent Query<br><b>Last 5 mins</b></div>
-          <div class="card large">
-            <h3>Anomaly Users</h3>
-            <ul class="anomaly-users-list">
-              <li style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
-                <img src="./assets/user1.png" alt="EMP001" style="width:32px;height:32px;border-radius:50%;object-fit:cover;">
-                <div style="flex:1;">
-                  <div style="font-weight:bold;color: #000000;">Daniel Davis Scott</div>
-                  <div style="font-size:0.8em;color:#888;">Data Analyst</div>
-                </div>
-                <span style="font-weight:bold;color:#e11d48;">0.92</span>
-              </li>
-              <li style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
-                <img src="./assets/user2.png" alt="EMP014" style="width:32px;height:32px;border-radius:50%;object-fit:cover;">
-                <div style="flex:1;">
-                  <div style="font-weight:bold;color: #000000;">Marriot Haus Queen</div>
-                  <div style="font-size:0.8em;color:#888;">Data Scientist</div>
-                </div>
-                <span style="font-weight:bold;color:#e11d48;">0.88</span>
-              </li>
-              <li style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
-                <img src="./assets/user3.png" alt="EMP014" style="width:32px;height:32px;border-radius:50%;object-fit:cover;">
-                <div style="flex:1;">
-                  <div style="font-weight:bold;color: #000000;">Cristian David</div>
-                  <div style="font-size:0.8em;color:#888;">Data Engineer</div>
-                </div>
-                <span style="font-weight:bold;color:#58e11d;">0.0012</span>
-              </li>
-              <li style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
-                <img src="./assets/user4.png" alt="EMP014" style="width:32px;height:32px;border-radius:50%;object-fit:cover;">
-                <div style="flex:1;">
-                  <div style="font-weight:bold;color: #000000;">Lionel Junior</div>
-                  <div style="font-size:0.8em;color:#888;">Service</div>
-                </div>
-                <span style="font-weight:bold;color:#58e11d;">0.0002</span>
-              </li>
-              <li style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
-                <img src="./assets/user5.png" alt="EMP014" style="width:32px;height:32px;border-radius:50%;object-fit:cover;">
-                <div style="flex:1;">
-                  <div style="font-weight:bold;color: #000000;">Brian Steven</div>
-                  <div style="font-size:0.8em;color:#888;">DB Admin</div>
-                </div>
-                <span style="font-weight:bold;color:#dee11d;">0.2004</span>
-              </li>
-              <li style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
-                <img src="./assets/user6.png" alt="EMP014" style="width:32px;height:32px;border-radius:50%;object-fit:cover;">
-                <div style="flex:1;">
-                  <div style="font-weight:bold;color: #000000;">Helios Marry</div>
-                  <div style="font-size:0.8em;color:#888;">DB Admin</div>
-                </div>
-                <span style="font-weight:bold;color:#dee11d;">0.102</span>
-              </li>
-            </ul>
-          </div>
-          <div class="card" style="color: #000000;">Total Events<br><b>18,244</b></div>
-          <div class="card" style="color: #000000;">Avg Risk<br><b style="color: #fec807;">0.41</b></div>
-          <div class="card wide" style="background: #ffffff;">
-            <div style="font-size:1em;font-weight:600;text-align:center;margin-bottom:8px;">Top User Queries</div>
-            <div style="display:flex;justify-content:center;align-items:center;">
-              <canvas id="userQueryChart" width="600" height="110" style="margin:0 auto;display:block;max-width:100%"></canvas>
-            </div>
-          </div>
+      <!-- Terminal-style Live Log -->
+      <div id="live-log-terminal" style="background:#181c1f;color:#e5e5e5;font-size:1.05em;border-radius:8px;padding:0 0 12px 0;box-shadow:0 2px 12px #0002;min-height:180px;max-height:320px;overflow-y:auto;margin-bottom:32px;">
+        <div id="live-log-header" style="background:#525252;padding:12px 18px 10px 18px;border-radius:8px 8px 0 0;display:flex;align-items:center;gap:12px;">
+          <div style="font-weight:bold;color:#7fffd4;font-size:1.08em;">UEBA SYSTEM Terminal</div>
         </div>
+        <div id="live-log-content" style="padding:8px 18px 0 18px;"></div>
       </div>
     </section>
     <!-- DETECT -->

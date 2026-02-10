@@ -1,9 +1,123 @@
-// Vẽ chart anomaly score vào card
+// --- Live Log Terminal (SSE) ---
+document.addEventListener('DOMContentLoaded', async function() {
+    // Luôn fetch dữ liệu dashboard khi khởi động
+    if (typeof renderDashboardSummary === 'function') {
+      renderDashboardSummary();
+    }
+  const logContent = document.getElementById('live-log-content');
+  if (!logContent) return;
+  // Hiệu ứng welcome và session timestamp
+  const sessionTime = new Date();
+  let hh = sessionTime.getHours().toString().padStart(2, '0');
+  let mm = sessionTime.getMinutes().toString().padStart(2, '0');
+  let ss = sessionTime.getSeconds().toString().padStart(2, '0');
+  const welcomeDiv = document.createElement('div');
+  welcomeDiv.innerHTML = `<span style="color:#38bdf8;font-weight:bold;font-size:0.9rem;">Welcome to UEBA Live Log Terminal</span>`;
+  welcomeDiv.style.whiteSpace = 'pre';
+  logContent.appendChild(welcomeDiv);
+  const sessionDiv = document.createElement('div');
+  sessionDiv.innerHTML = `<span style="color:#a3a3a3;font-size:0.9rem;">Session started at ${sessionTime.getDate().toString().padStart(2, '0')}/${(sessionTime.getMonth() + 1).toString().padStart(2, '0')}/${sessionTime.getFullYear()} ${hh}:${mm}:${ss}</span>`;
+  sessionDiv.style.whiteSpace = 'pre';
+  logContent.appendChild(sessionDiv);
+  // Loading effect for database check
+  const dbCheckDiv = document.createElement('div');
+  dbCheckDiv.innerHTML = `<span class="loader" style="margin-right:8px;width:16px;height:16px;border-width:2px;font-size:0.9rem;"></span> <span style="color:#888;font-size:0.9rem;">Checking database connection...</span>`;
+  dbCheckDiv.style.whiteSpace = 'pre';
+  logContent.appendChild(dbCheckDiv);
+  // Kiểm tra database connection
+  let dbStatus = 'unknown';
+  try {
+    const res = await fetch('http://127.0.0.1:8000/dashboard/summary', {method:'GET'});
+    if (res.ok) {
+      dbCheckDiv.innerHTML = `<span style="color:#22c55e;font-size:0.9rem;">[DB OK] Database connection successful.</span>`;
+      dbCheckDiv.style.color = '#22c55e';
+      dbStatus = 'ok';
+    } else {
+      dbCheckDiv.innerHTML = `<span style="color:#ff6b6b;font-size:0.9rem;">[DB ERROR] Database connection failed.</span>`;
+      dbCheckDiv.style.color = '#ff6b6b';
+      dbStatus = 'fail';
+    }
+  } catch (err) {
+    dbCheckDiv.innerHTML = `<span style="color:#ff6b6b;font-size:0.9rem;">[DB ERROR] Database connection failed.</span>`;
+    dbCheckDiv.style.color = '#ff6b6b';
+    dbStatus = 'fail';
+  }
+  // Loading effect
+  const loadingDiv = document.createElement('div');
+  loadingDiv.innerHTML = `<span class="loader" style="margin-right:8px;width:16px;height:16px;border-width:2px;font-size:0.9rem;"></span> <span style="color:#888;font-size:0.9rem;">Connecting to API...</span>`;
+  loadingDiv.style.whiteSpace = 'pre';
+  logContent.appendChild(loadingDiv);
+  // Connect SSE
+  const es = new EventSource('http://127.0.0.1:8000/live-log-stream');
+  let logCount = 0;
+  let lastLogTime = Date.now();
+  let noLogTimeout = null;
+  function showNoLogMsg() {
+    const div = document.createElement('div');
+    div.textContent = '[INFO] No new activity in the last 30 seconds.';
+    div.style.color = '#e1851d';
+    logContent.appendChild(div);
+    logContent.scrollTop = logContent.scrollHeight;
+    // Giới hạn số dòng
+    while (logContent.childNodes.length > 100) logContent.removeChild(logContent.firstChild);
+  }
+  es.onopen = function() {
+    // Đã kết nối API
+    loadingDiv.innerHTML = `<span style="color:#22c55e;font-size:0.9rem;">[CONNECTED] Connected to live log API.</span>`;
+    loadingDiv.style.color = '#22c55e';
+    logContent.scrollTop = logContent.scrollHeight;
+  };
+  es.onmessage = function(e) {
+    try {
+      if (loadingDiv) loadingDiv.style.display = 'none';
+      const log = JSON.parse(e.data);
+      let t = log.QueryTime ? new Date(log.QueryTime) : new Date();
+      let hh = t.getHours().toString().padStart(2, '0');
+      let mm = t.getMinutes().toString().padStart(2, '0');
+      let ss = t.getSeconds().toString().padStart(2, '0');
+      let timeStr = `[${hh}:${mm}:${ss}]`;
+      let msg = `${timeStr}  EmployeeID:${log.EmployeeID}  |  Type:${log.QueryType}  |  LogID:${log.QueryLogID}`;
+      const div = document.createElement('div');
+      div.textContent = msg;
+      div.style.whiteSpace = 'pre';
+      logContent.appendChild(div);
+      logCount++;
+      lastLogTime = Date.now();
+      // Hiển thị số lượng log đã nhận
+      if (logCount === 1) {
+        const infoDiv = document.createElement('div');
+        infoDiv.innerHTML = `<span style="color:#38bdf8;font-size:0.9rem;">[INFO] Received first event.</span>`;
+        logContent.appendChild(infoDiv);
+      } else if (logCount % 10 === 0) {
+        const infoDiv = document.createElement('div');
+        infoDiv.innerHTML = `<span style="color:#38bdf8;font-size:0.9rem;">[INFO] Received ${logCount} events.</span>`;
+        logContent.appendChild(infoDiv);
+      }
+      // Giới hạn số dòng
+      while (logContent.childNodes.length > 100) logContent.removeChild(logContent.firstChild);
+      logContent.scrollTop = logContent.scrollHeight;
+      // Reset timeout không có log
+      if (noLogTimeout) clearTimeout(noLogTimeout);
+      noLogTimeout = setTimeout(() => {
+        showNoLogMsg();
+      }, 30000);
+    } catch(err) {
+      // Ignore parse errors
+    }
+  };
+  es.onerror = function(e) {
+    loadingDiv.innerHTML = `<span style="color:#ff6b6b;font-size:0.9rem;">[ERROR] Unable to connect to live log server.</span>`;
+    loadingDiv.style.color = '#ff6b6b';
+    loadingDiv.style.display = 'block';
+    logContent.scrollTop = logContent.scrollHeight;
+  };
+});
+// Draw anomaly score chart in card
 async function renderAnomalyScoreChart() {
   const canvas = document.getElementById('anomalyScoreChart');
   const tooltip = document.getElementById('anomalyScoreTooltip');
   if (!canvas) return;
-  // Hiệu ứng loading cho chart (thêm logo)
+  // Loading effect for chart (add logo)
   let chartLoading = document.getElementById('ml-detect-chart-loading');
   if (!chartLoading) {
     chartLoading = document.createElement('div');
@@ -296,6 +410,9 @@ function showPage(id, event) {
     renderMLDetect_DetectSection();
     setTimeout(renderAnomalyScoreChart, 300); // Đảm bảo DOM đã render xong
   }
+  if (id === 'dashboard') {
+   renderDashboardSummary()
+  }
 }
 // Render dữ liệu anomaly từ /ueba/detect vào bảng list
 // Biến toàn cục lưu detect JSON mới nhất
@@ -558,7 +675,7 @@ document.addEventListener('DOMContentLoaded', function() {
       try {
         // Lấy JSON detect đã lưu trước đó
         const detectJson = window.lastDetectJson || {};
-        const res = await fetch('https://ueba-system.onrender.com/ueba/export-pdf', {
+        const res = await fetch('http://ueba-system.onrender.com/ueba/export-pdf', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(detectJson)
@@ -844,4 +961,16 @@ if (anomalyTable) {
     </table>
   `;
 }
-
+async function renderDashboardSummary() {
+  try {
+    const res = await fetch('http://127.0.0.1:8000/dashboard/summary');
+    const data = await res.json();
+    document.getElementById('total_query_all').textContent = data.total_query_all ?? '--';
+    document.getElementById('total_rows_examined').textContent = data.total_rows_examined ?? '--';
+    document.getElementById('total_events').textContent = data.total_events ?? '--';
+    document.getElementById('failed_auth_all').textContent = data.failed_auth_all ?? '--';
+  } catch (e) {
+    // Nếu lỗi, giữ nguyên giá trị cũ
+    console.error('Dashboard summary error:', e);
+  }
+}
