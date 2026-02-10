@@ -675,7 +675,7 @@ document.addEventListener('DOMContentLoaded', function() {
       try {
         // Lấy JSON detect đã lưu trước đó
         const detectJson = window.lastDetectJson || {};
-        const res = await fetch('http://ueba-system.onrender.com/ueba/export-pdf', {
+        const res = await fetch('https://ueba-system.onrender.com/ueba/export-pdf', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(detectJson)
