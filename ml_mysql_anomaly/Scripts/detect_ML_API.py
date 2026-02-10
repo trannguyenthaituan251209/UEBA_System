@@ -408,7 +408,9 @@ async def export_pdf_from_data(request: Request, data: Dict[str, Any] = Body(...
         pdf.set_auto_page_break(auto=True, margin=15)
         pdf.add_page()
         # Add custom font (assume font file is in assets/fonts/YourFont.ttf)
-        font_path = os.path.join(BASE_DIR, '.', 'assets', 'fonts', 'SourceCodePro-VariableFont_wght.ttf')
+        # Sửa đường dẫn font: lấy từ thư mục gốc project (không phụ thuộc BASE_DIR local)
+        font_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '../../assets/fonts/SourceCodePro-VariableFont_wght.ttf'))
+        print("[EXPORT PDF] Font path:", font_path, "Exists:", os.path.exists(font_path))
         font_name = "CustomFont"
         if os.path.exists(font_path):
             try:
