@@ -145,7 +145,7 @@ async function renderAnomalyScoreChart() {
   ctx.clearRect(0, 0, parent.offsetWidth, parent.offsetHeight);
   // Fetch data
   try {
-    const res = await fetch('https://ueba-system.onrender.com/ueba/scorechart');
+    const res = await fetch('http://127.0.0.1:8000/ueba/scorechart');
     const data = await res.json();
     const points = data.data || [];
     const threshold = data.threshold ?? 0.5;
@@ -418,8 +418,44 @@ function showPage(id, event) {
 // Biến toàn cục lưu detect JSON mới nhất
 window.lastDetectJson = null;
 async function renderMLDetect_DetectSection() {
-  const overview = document.getElementById('ml-detect-overview');
-  const anomalyTable = document.getElementById('ml-anomaly-table');
+  // Layout stack: chart trên, đánh giá dưới
+  const detectSection = document.getElementById('detect');
+  if (!detectSection) return;
+  let stackDiv = document.getElementById('ml-detect-stack');
+  if (!stackDiv) {
+    stackDiv = document.createElement('div');
+    stackDiv.id = 'ml-detect-stack';
+    stackDiv.style = 'display:flex;flex-direction:column;gap:24px;width:100%';
+    const grid = detectSection.querySelector('.ml-detect-grid');
+    if (grid) grid.replaceWith(stackDiv);
+    else detectSection.appendChild(stackDiv);
+  } else {
+    stackDiv.innerHTML = '';
+  }
+  // Chart phía trên
+  const chartCard = document.createElement('div');
+  chartCard.className = 'card chart';
+  chartCard.innerHTML = `
+    <h3>Anomaly Score Chart</h3>
+    <div class="chart-wrap">
+      <canvas id="anomalyScoreChart"></canvas>
+      <div id="anomalyScoreTooltip"></div>
+    </div>
+    <div style="font-size: 0.6rem;color: #727272;">*NOTE: Anomaly scores are calculated by Machine Learning may not be 100% accurate and should be used as a reference. Don't rely solely on these scores for critical decisions.</div>
+  `;
+  stackDiv.appendChild(chartCard);
+  setTimeout(renderAnomalyScoreChart, 300);
+  // Đánh giá hệ thống phía dưới
+  const overviewCard = document.createElement('div');
+  overviewCard.className = 'card overview';
+  overviewCard.id = 'ml-detect-overview';
+  stackDiv.appendChild(overviewCard);
+  // Bảng anomaly phía dưới nữa
+  const anomalyTableCard = document.createElement('div');
+  anomalyTableCard.className = 'card table';
+  anomalyTableCard.id = 'ml-anomaly-table';
+  stackDiv.appendChild(anomalyTableCard);
+  // Render dữ liệu như cũ
   const exportBtn = document.querySelector('.btn-export');
   if (exportBtn) {
     exportBtn.disabled = true;
@@ -427,16 +463,8 @@ async function renderMLDetect_DetectSection() {
     exportBtn.style.color = '#fff';
     exportBtn.style.cursor = 'not-allowed';
   }
-    if (overview) overview.innerHTML = `<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;min-height:180px;gap:10px;">
-      <img src='./assets/UEBA_coporation_logo.png' alt='logo' style='width:60px;height:60px;object-fit:contain;filter:drop-shadow(0 2px 6px #0002);'>
-      <div class="loader"></div>
-    </div>`;
-    if (anomalyTable) anomalyTable.innerHTML = `<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:180px;gap:10px;">
-      <img src='./assets/UEBA_coporation_logo.png' alt='logo' style='width:60px;height:60px;object-fit:contain;filter:drop-shadow(0 2px 6px #0002);'>
-      <div class="loader"></div>
-    </div>`;
   try {
-    const res = await fetch('https://ueba-system.onrender.com/ueba/detect');
+    const res = await fetch('http://127.0.0.1:8000/ueba/detect');
     const data = await res.json();
     window.lastDetectJson = data;
     if (exportBtn) {
@@ -446,81 +474,76 @@ async function renderMLDetect_DetectSection() {
       exportBtn.style.cursor = '';
     }
     // Render tổng quan sinh động hơn
-    if (overview) {
-      const anomalyRate = data.total_rows ? ((data.anomalies/data.total_rows)*100) : 0;
-      let badge = '';
-      let badgeColor = '';
-      if (anomalyRate < 5) { badge = 'SAFE'; badgeColor = '#22c55e'; }
-      else if (anomalyRate < 15) { badge = 'WARNING'; badgeColor = '#facc15'; }
-      else { badge = 'DANGER'; badgeColor = '#ef4444'; }
-      overview.innerHTML = `
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
-          <img src='./assets/overview.png' alt='shield' style='width:32px;height:32px;object-fit:contain;filter:drop-shadow(0 2px 6px #0002);'>
-          <span style="padding:4px 14px;border-radius:16px;font-weight:bold;font-size:0.95em;background:${badgeColor};color:#fff;box-shadow:0 2px 8px #0001;">${badge}</span>
-        </div>
-        <div style="font-size: 0.8rem;">Total Records: <b style="font-size: 0.8rem;">${data.total_rows ?? '--'}</b></div>
-        <div style="font-size: 0.8rem;">Anomalies Detected: <b style="font-size: 0.8rem;">${data.anomalies ?? '--'}</b></div>
-        <div style="font-size: 0.8rem;">Anomaly Rate: <b style="font-size: 0.8rem;">${anomalyRate.toFixed(2)}%</b></div>
-        <div style="margin:12px 0 8px 0;width:100%;height:10px;background:#e0e7ef;border-radius:6px;overflow:hidden;">
-          <div style="height:100%;width:${anomalyRate.toFixed(2)}%;background:${badgeColor};transition:width 0.6s;"></div>
-        </div>
-        <div style="font-size:0.9em;color:#1e293b;opacity:0.95;margin-top:12px;font-style:italic;min-height:32px;">
-          <span style="font-size:1.1em;">⚠️</span> ${data.context}
-        </div>
-      `;
-    }
+    const anomalyRate = data.total_rows ? ((data.anomalies/data.total_rows)*100) : 0;
+    let badge = '';
+    let badgeColor = '';
+    if (anomalyRate < 5) { badge = 'SAFE'; badgeColor = '#22c55e'; }
+    else if (anomalyRate < 15) { badge = 'WARNING'; badgeColor = '#facc15'; }
+    else { badge = 'DANGER'; badgeColor = '#ef4444'; }
+    overviewCard.innerHTML = `
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+        <img src='./assets/overview.png' alt='shield' style='width:32px;height:32px;object-fit:contain;filter:drop-shadow(0 2px 6px #0002);'>
+        <span style="padding:4px 14px;border-radius:16px;font-weight:bold;font-size:0.95em;background:${badgeColor};color:#fff;box-shadow:0 2px 8px #0001;">${badge}</span>
+      </div>
+      <div style="font-size: 0.8rem;">Total Records: <b style="font-size: 0.8rem;">${data.total_rows ?? '--'}</b></div>
+      <div style="font-size: 0.8rem;">Anomalies Detected: <b style="font-size: 0.8rem;">${data.anomalies ?? '--'}</b></div>
+      <div style="font-size: 0.8rem;">Anomaly Rate: <b style="font-size: 0.8rem;">${anomalyRate.toFixed(2)}%</b></div>
+      <div style="margin:12px 0 8px 0;width:100%;height:10px;background:#e0e7ef;border-radius:6px;overflow:hidden;">
+        <div style="height:100%;width:${anomalyRate.toFixed(2)}%;background:${badgeColor};transition:width 0.6s;"></div>
+      </div>
+      <p style="text-align:center;font-size:0.9rem;color:#000;">Context assessed by distilgpt2 <br> <span style="font-size:0.7rem;color:#727272;">A small model by Hugging Face</span></p>
+      <div style="font-size:0.9em;color:#1e293b;opacity:0.95;margin-top:12px;min-height:32px;">
+        <span style="font-size:1.1em;"></span> ${data.context}
+      </div>
+    `;
     // Render bảng anomaly
-    if (anomalyTable) {
-      anomalyTable.innerHTML = `
-        <table style="width:100%;border-collapse:collapse;">
-          <thead>
-            <tr>
-              <th style="font-size: 0.8rem;">EmployeeID</th>
-              <th style="font-size: 0.8rem;">QueryTime</th>
-              <th style="font-size: 0.8rem;">LogID</th>
-              <th style="font-size: 0.8rem;">Anomaly Score</th>
-              <th style="font-size: 0.8rem;">RowsExamined</th>
-              <th style="font-size: 0.8rem;">RowsReturned</th>
-              <th style="font-size: 0.8rem;">ExecutionTime</th>
-              <th style="font-size: 0.8rem;">QueryLength</th>
-              <th style="font-size: 0.8rem;">IsSensitive</th>
-              <th style="font-size: 0.8rem;">Type</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${data.data.map(row => {
-              let logid = '';
-              if (row.QueryLogID !== undefined) logid = row.QueryLogID;
-              else if (row.queryLogID !== undefined) logid = row.queryLogID;
-              else if (row.querylogid !== undefined) logid = row.querylogid;
-              else if (row.query_log_id !== undefined) logid = row.query_log_id;
-              else {
-                for (const k in row) {
-                  if (k.toLowerCase().includes('logid')) { logid = row[k]; break; }
-                }
+    anomalyTableCard.innerHTML = `
+      <table style="width:100%;border-collapse:collapse;">
+        <thead>
+          <tr>
+            <th style="font-size: 0.8rem;">EmployeeID</th>
+            <th style="font-size: 0.8rem;">QueryTime</th>
+            <th style="font-size: 0.8rem;">LogID</th>
+            <th style="font-size: 0.8rem;">Anomaly Score</th>
+            <th style="font-size: 0.8rem;">RowsExamined</th>
+            <th style="font-size: 0.8rem;">RowsReturned</th>
+            <th style="font-size: 0.8rem;">ExecutionTime</th>
+            <th style="font-size: 0.8rem;">QueryLength</th>
+            <th style="font-size: 0.8rem;">Type</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${data.data.map(row => {
+            let logid = '';
+            if (row.QueryLogID !== undefined) logid = row.QueryLogID;
+            else if (row.queryLogID !== undefined) logid = row.queryLogID;
+            else if (row.querylogid !== undefined) logid = row.querylogid;
+            else if (row.query_log_id !== undefined) logid = row.query_log_id;
+            else {
+              for (const k in row) {
+                if (k.toLowerCase().includes('logid')) { logid = row[k]; break; }
               }
-              return `
-              <tr>
-                <td style="font-size: 0.8rem;">${row.EmployeeID ?? '--'}</td>
-                <td style="font-size: 0.8rem;">${row.QueryTime ?? '--'}</td>
-                <td style="font-size: 0.8rem;">${logid ?? '--'}</td>
-                <td style="font-size: 0.8rem;">${row.anomaly_score !== undefined ? Number(row.anomaly_score).toFixed(3) : '--'}</td>
-                <td style="font-size: 0.8rem;">${row.RowsExamined !== undefined ? (Number.isInteger(Number(row.RowsExamined)) ? Number(row.RowsExamined) : Number(row.RowsExamined).toFixed(3)) : '--'}</td>
-                <td style="font-size: 0.8rem;">${row.RowsReturned !== undefined ? (Number.isInteger(Number(row.RowsReturned)) ? Number(row.RowsReturned) : Number(row.RowsReturned).toFixed(3)) : '--'}</td>
-                <td style="font-size: 0.8rem;">${row.ExecutionTime !== undefined ? (Number.isInteger(Number(row.ExecutionTime)) ? Number(row.ExecutionTime) : Number(row.ExecutionTime).toFixed(3)) : '--'}</td>
-                <td style="font-size: 0.8rem;">${row.QueryLength !== undefined ? (Number.isInteger(Number(row.QueryLength)) ? Number(row.QueryLength) : Number(row.QueryLength).toFixed(3)) : '--'}</td>
-                <td style="font-size: 0.8rem;">${row.IsSensitive !== undefined ? (Number.isInteger(Number(row.IsSensitive)) ? Number(row.IsSensitive) : Number(row.IsSensitive).toFixed(3)) : '--'}</td>
-                <td style="font-size: 0.8rem;">${row.query_type !== undefined ? (Number.isInteger(Number(row.query_type)) ? Number(row.query_type) : Number(row.query_type).toFixed(3)) : '--'}</td>
-              </tr>
-              `;
-            }).join('')}
-          </tbody>
-        </table>
-      `;
-    }
+            }
+            return `
+            <tr>
+              <td style="font-size: 0.8rem;">${row.EmployeeID ?? '--'}</td>
+              <td style="font-size: 0.8rem;">${row.QueryTime ?? '--'}</td>
+              <td style="font-size: 0.8rem;">${logid ?? '--'}</td>
+              <td style="font-size: 0.8rem;">${row.anomaly_score !== undefined ? Number(row.anomaly_score).toFixed(3) : '--'}</td>
+              <td style="font-size: 0.8rem;">${row.RowsExamined !== undefined ? (Number.isInteger(Number(row.RowsExamined)) ? Number(row.RowsExamined) : Number(row.RowsExamined).toFixed(3)) : '--'}</td>
+              <td style="font-size: 0.8rem;">${row.RowsReturned !== undefined ? (Number.isInteger(Number(row.RowsReturned)) ? Number(row.RowsReturned) : Number(row.RowsReturned).toFixed(3)) : '--'}</td>
+              <td style="font-size: 0.8rem;">${row.ExecutionTime !== undefined ? (Number.isInteger(Number(row.ExecutionTime)) ? Number(row.ExecutionTime) : Number(row.ExecutionTime).toFixed(3)) : '--'}</td>
+              <td style="font-size: 0.8rem;">${row.QueryLength !== undefined ? (Number.isInteger(Number(row.QueryLength)) ? Number(row.QueryLength) : Number(row.QueryLength).toFixed(3)) : '--'}</td>
+              <td style="font-size: 0.8rem;">${row.query_type !== undefined ? (Number.isInteger(Number(row.query_type)) ? Number(row.query_type) : Number(row.query_type).toFixed(3)) : '--'}</td>
+            </tr>
+            `;
+          }).join('')}
+        </tbody>
+      </table>
+    `;
   } catch (e) {
-    if (overview) overview.innerHTML = '<span style="color:red;">Lỗi khi tải dữ liệu ML</span>';
-    if (anomalyTable) anomalyTable.innerHTML = '';
+    overviewCard.innerHTML = '<span style="color:red;">Lỗi khi tải dữ liệu ML</span>';
+    anomalyTableCard.innerHTML = '';
     console.error('ML Detect error:', e);
   }
 }
@@ -583,6 +606,104 @@ document.addEventListener('DOMContentLoaded', function() {
         if (typeof renderAnomalyScoreChart === 'function') renderAnomalyScoreChart();
         if (typeof renderMLDetect_DetectSection === 'function') renderMLDetect_DetectSection();
       }
+    });
+  }
+  // Employee Search Logic
+  const empSearchBtn = document.getElementById('employee-search-btn');
+  const empSearchInput = document.getElementById('employee-search-input');
+  const empResultDiv = document.getElementById('employee-search-result');
+  if (empSearchBtn && empSearchInput && empResultDiv) {
+    async function searchEmployee() {
+      const empId = empSearchInput.value.trim();
+      if (!empId) {
+        empResultDiv.innerHTML = '<span style="color:#e11d48;">Non-empty field, please enter Employee ID.</span>';
+        return;
+      }
+      empResultDiv.innerHTML = `
+      <div style="display:flex;flex-direction:column;align-items:center;gap:10px;">
+        <img src='./assets/UEBA_coporation_logo.png' alt='logo' style='width:60px;height:60px;object-fit:contain;filter:drop-shadow(0 2px 6px #0002);'>
+        <div class="loader"></div>
+        <p>Loading employee information...</p>
+      </div>
+    `;
+      try {
+        const res = await fetch(`http://127.0.0.1:8000/employee/info/${encodeURIComponent(empId)}`);
+        const data = await res.json();
+        if (data.error) {
+          empResultDiv.innerHTML = `<span style='color:#e11d48;'>${data.error}</span>`;
+          return;
+        }
+        // Card employee info
+        let html = `<div style='background:#f7f7f7;border-radius:12px;padding:24px 28px 18px 28px;margin-bottom:24px;'>`;
+        html += `<div style='display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;'>`;
+        html += `<div style='display:flex;align-items:center;gap:14px;'>`;
+        html += `<img src='${data.avatar_url ?? './assets/UnknowUser.png'}' alt='avatar' style='width:44px;height:44px;border-radius:50%;object-fit:cover;box-shadow:0 2px 8px #0001;'>`;
+        html += `<span style='font-size:1.5em;font-weight:bold;color:#000;'>${data.full_name ?? data.employee_id}</span>`;
+        html += `</div>`;
+        html += `<div style='display:flex;align-items:center;gap:12px;'>`;
+        html += `<span style='background:#e0e7ef;color:#222;padding:4px 14px;border-radius:16px;font-weight:500;font-size:0.95em;'>${data.role ?? ''}</span>`;
+        html += `<span style='color:#888;font-size:1em;'>ID: ${data.employee_id}</span>`;
+        html += `</div>`;
+        html += `</div>`;
+        
+        html += `</div>`;
+        // Auth events
+        html += `<div style='margin-bottom:18px;'><b style='font-size:1em;color:#0ea5e9;'>Authentication Events</b></div>`;
+        if (data.auth_events && data.auth_events.length) {
+          html += `<div style='overflow-x:auto;'><table style='width:100%;border-collapse:collapse;background:#fff;border-radius:8px;box-shadow:0 2px 8px #0001;'>`;
+          html += `<thead style='background:#e0e7ef;'><tr><th style='padding:8px 10px;'>LoginTime</th><th style='padding:8px 10px;'>LogoutTime</th><th style='padding:8px 10px;'>SourceIP</th><th style='padding:8px 10px;'>DeviceInfo</th><th style='padding:8px 10px;'>Status</th><th style='padding:8px 10px;'>FailureReason</th></tr></thead><tbody>`;
+          html += data.auth_events.map(ev => `<tr style='text-align:center;'>
+            <td style='padding:7px 20px;'>${ev.login_time ?? '--'}</td>
+            <td style='padding:7px 20px;'>${ev.logout_time ?? '--'}</td>
+            <td style='padding:7px 20px;'>${ev.source_ip ?? '--'}</td>
+            <td style='padding:7px 20px;'>${ev.device_info ?? '--'}</td>
+            <td style='padding:7px 20px;color:${ev.login_status==='Success'?'#16a34a':'#e11d48'};font-weight:bold;'>${ev.login_status ?? '--'}</td>
+            <td style='padding:7px 20px;color:#e11d48;'>${ev.failure_reason ?? '--'}</td>
+          </tr>`).join('');
+          html += `</tbody></table></div>`;
+        } else {
+          html += `<div style='color:#888;'>No authentication events found.</div>`;
+        }
+        // Query events
+        html += `<div style='margin:24px 0 12px 0;'><b style='font-size:1em;color:#0ea5e9;'>Query Events</b></div>`;
+        if (data.query_events && data.query_events.length) {
+          html += `<div style='overflow-x:auto;'><table style='width:100%;border-collapse:collapse;background:#fff;border-radius:8px;box-shadow:0 2px 8px #0001;'>`;
+          html += `<thead style='background:#e0e7ef;'><tr style='text-align:center;'>
+            <th style='padding:7px 20px;'>QueryLogID</th>
+            <th style='padding:7px 20px;'>QueryTime</th>
+            <th style='padding:7px 20px;'>QueryType</th>
+            <th style='padding:7px 20px;'>RowsExamined</th>
+            <th style='padding:7px 20px;'>RowsReturned</th>
+            <th style='padding:7px 20px;'>ExecutionTime</th>
+            <th style='padding:7px 20px;'>QueryLength</th>
+            <th style='padding:7px 20px;'>SourceIP</th>
+            <th style='padding:7px 20px;'>AffectedTable</th>
+            <th style='padding:7px 20px;'>Labels</th>
+          </tr></thead><tbody>`;
+          html += data.query_events.map(ev => `<tr style='text-align:center;'>
+            <td style='padding:7px 20px;'>${ev.query_log_id ?? '--'}</td>
+            <td style='padding:7px 20px;'>${ev.query_time ?? '--'}</td>
+            <td style='padding:7px 20px;'>${ev.query_type ?? '--'}</td>
+            <td style='padding:7px 20px;'>${ev.rows_examined ?? '--'}</td>
+            <td style='padding:7px 20px;'>${ev.rows_returned ?? '--'}</td>
+            <td style='padding:7px 20px;'>${ev.execution_time ?? '--'}</td>
+            <td style='padding:7px 20px;'>${ev.query_length ?? '--'}</td>
+            <td style='padding:7px 20px;'>${ev.source_ip ?? '--'}</td>
+            <td style='padding:7px 20px;'>${ev.affected_table ?? '--'}</td>
+            <td style='padding:7px 20px;'>${ev.labels ?? '--'}</td>
+          </tr>`).join('');
+          html += `</tbody></table></div>`;
+        } else {
+          html += `<div style='color:#888;'>No query events found.</div>`;
+        }
+        empResultDiv.innerHTML = html;
+      } catch (e) {
+        empResultDiv.innerHTML = `<span style='color:#e11d48;'>Error loading employee data.</span>`;
+      }
+    }
+    empSearchBtn.addEventListener('click', searchEmployee);
+    empSearchInput.addEventListener('keydown', function(e) {
+      if (e.key === 'Enter') searchEmployee();
     });
   }
 });
@@ -675,7 +796,7 @@ document.addEventListener('DOMContentLoaded', function() {
       try {
         // Lấy JSON detect đã lưu trước đó
         const detectJson = window.lastDetectJson || {};
-        const res = await fetch('https://ueba-system.onrender.com/ueba/export-pdf', {
+        const res = await fetch('http://127.0.0.1:8000/ueba/export-pdf', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(detectJson)
@@ -939,7 +1060,6 @@ if (anomalyTable) {
           <th>RowsReturned</th>
           <th>ExecutionTime</th>
           <th>QueryLength</th>
-          <th>IsSensitive</th>
           <th>Type</th>
         </tr>
       </thead>
@@ -953,7 +1073,6 @@ if (anomalyTable) {
             <td>${row.RowsReturned ?? '--'}</td>
             <td>${row.ExecutionTime !== undefined ? (Number(row.ExecutionTime) % 1 === 0 ? Number(row.ExecutionTime) : Number(row.ExecutionTime).toFixed(3)) : '--'}</td>
             <td>${row.QueryLength ?? '--'}</td>
-            <td>${row.IsSensitive ?? '--'}</td>
             <td>${row.query_type ?? '--'}</td>
           </tr>
         `).join('')}

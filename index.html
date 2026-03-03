@@ -1,6 +1,15 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+        <style>
+          /* Employee section font size sync */
+          #employee h1 { font-size: 24px !important; }
+          #employee h2 { font-size: 20px !important; }
+          #employee a, #employee-search-result a { font-size: 16px !important; }
+          #employee th, #employee-search-result p { font-size: 12px !important; }
+          #employee td, #employee-search-result p { font-size: 13px !important; }
+
+        </style>
     <style>
       @font-face {
         font-family: 'Code';
@@ -276,8 +285,26 @@
 
     <!-- EMPLOYEE -->
     <section id="employee" class="page">
-      <h2>Employee Management</h2>
-      <p>(Future feature)</p>
+  <div class="card detect-header-bar">
+    <div class="detect-logo">
+      <img src="./assets/UEBA SYSTEM.png" alt="Logo" />
+    </div>
+    <div class="detect-title-wrap">
+      <h2 class="detect-title" style="font-size: 1.5rem;">
+        <span style="font-weight:800;color:#222;">UEBA</span>
+        <span style="font-weight:50;color:#727272;margin-left:8px;">Employee Management</span>
+      </h2>
+      <span style="font-size:0.8rem;color:#939393;">Detect abnomaly by Machine Learning. Developed by Group 3 -FPT University Campus High Teck Park </span>
+    </div>
+    <div class="detect-header-actions">
+      <div style="display:flex;align-items:center;gap:12px;max-width:520px;">
+        <input id="employee-search-input" type="text" placeholder="Search Employee ID..." style="flex:1;width:320px;max-width:100%;padding:10px 16px;border-radius:8px;border:1px solid #d1d5db;font-size:1rem;outline:none;" />
+        <button id="employee-search-btn" style="padding:10px 28px;border-radius:8px;background:#000000;color:#fff;font-weight:bold;border:none;cursor:pointer;font-size:1em;">Search</button>
+      </div>
+    </div>
+  </div>
+      <p></p>
+      <div id="employee-search-result" style="margin-top:18px;"></div>
     </section>
     <!-- DATABASE -->
     <section id="database" class="page">

@@ -1,4 +1,3 @@
-
 import sys, os
 sys.path.append(os.path.dirname(__file__))
 from db_connection import get_connection
@@ -16,14 +15,41 @@ import pandas as pd
 import joblib
 from fastapi.middleware.cors import CORSMiddleware
 import time
+from transformers import pipeline
 from fastapi.responses import StreamingResponse, FileResponse, JSONResponse
 import json
 from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score
 from fpdf import FPDF
 from typing import Any, Dict
 
-app = FastAPI(title="UEBA Detection API")
 
+
+# Pipeline sinh context tự nhiên
+try:
+    context_generator = pipeline('text-generation', model='distilgpt2')
+except Exception as e:
+    context_generator = None
+
+def generate_context(anomaly_count, anomaly_rate, top_users, sample_data):
+    if context_generator is None:
+        print("[LLM] context_generator is None, fallback context.")
+        return None
+    prompt = (
+        f"The system detected {anomaly_count} anomalies with a rate of {anomaly_rate:.2%}. "
+        f"Most suspicious users: {top_users}. Sample data: {sample_data}. "
+        "Need to notify the system administrator."
+    )
+    print(f"[LLM] Prompt: {prompt}")
+    try:
+        result = context_generator(prompt, max_length=100, do_sample=True)
+        print(f"[LLM] Output: {result}")
+        return result[0]['generated_text']
+    except Exception as e:
+        print(f"[LLM] Error: {e}")
+        return None
+
+# Khai báo app trước khi add_middleware
+app = FastAPI(title="UEBA Detection API")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
@@ -99,9 +125,10 @@ LEFT JOIN Employees e
 @app.get("/ueba/detect")
 def detect_anomalies():
     conn = get_connection()
-    df = pd.read_csv(DATA_PATH).fillna(0)
+    # Đọc trực tiếp từ database QueryLogs
+    df = pd.read_sql("SELECT * FROM QueryLogs", conn).fillna(0)
 
-
+    # Feature engineering như cũ
     df["hour_of_day"] = pd.to_datetime(df["QueryTime"]).dt.hour
     df["is_after_hours"] = ((df["hour_of_day"] < 7) | (df["hour_of_day"] > 17)).astype(int)
     from sklearn.preprocessing import LabelEncoder
@@ -130,24 +157,30 @@ def detect_anomalies():
     total_rows = int(len(df))
     anomaly_count = int(len(anomalies))
     anomaly_rate = (anomaly_count / total_rows) if total_rows else 0
-    # Thêm thông tin user bất thường nhất vào context
-    if anomaly_count == 0:
-        context = "System is safe. No significant anomalies detected."
-    else:
-        # Lấy top 1-2 user bất thường nhất
-        top_users = []
-        for i, row in enumerate(anomalies.head(2).itertuples()):
-            emp = getattr(row, "EmployeeID", None)
-            score = getattr(row, "anomaly_score", None)
-            if emp is not None and score is not None:
-                top_users.append(f"{emp} (score: {score:.2f})")
-        top_users_str = ", ".join(top_users)
-        if anomaly_rate < 0.05:
+    # Lấy top 1-2 user bất thường nhất
+    top_users = []
+    for i, row in enumerate(anomalies.head(2).itertuples()):
+        emp = getattr(row, "EmployeeID", None)
+        score = getattr(row, "anomaly_score", None)
+        if emp is not None and score is not None:
+            top_users.append(f"{emp} (score: {score:.2f})")
+    top_users_str = ", ".join(top_users)
+    # Lấy 1-2 dòng dữ liệu mẫu anomaly
+    sample_data = anomalies.head(2).to_dict(orient='records') if anomaly_count > 0 else []
+    # Sinh context tự nhiên bằng transformers nếu có
+    context = generate_context(anomaly_count, anomaly_rate, top_users_str, sample_data)
+    print(f"[LLM] Final context: {context}")
+    if context is None:
+        # Fallback về context cũ nếu không sinh được
+        if anomaly_count == 0:
+            context = "System is safe. No significant anomalies detected."
+        elif anomaly_rate < 0.05:
             context = f"System is safe. {anomaly_count} minor anomalies detected. Most abnormal user: {top_users_str}."
         elif anomaly_rate < 0.15:
             context = f"Warning: {anomaly_count} anomalies detected. Most abnormal user: {top_users_str}. Please review recent activities."
         else:
             context = f"Danger: High anomaly rate ({anomaly_rate:.1%})! Top outlier(s): {top_users_str}. Immediate investigation recommended."
+    print(f"[LLM] Used context: {context}")
 
     # Tìm đúng tên cột QueryLogID (phân biệt hoa thường)
     querylogid_col = None
@@ -298,7 +331,9 @@ def get_anomaly_scores():
     import joblib
     import numpy as np
     from sklearn.preprocessing import LabelEncoder
-    df = pd.read_csv(DATA_PATH)
+    conn = get_connection()
+    # Đọc trực tiếp từ database QueryLogs
+    df = pd.read_sql("SELECT * FROM QueryLogs", conn).fillna(0)
     df["hour_of_day"] = pd.to_datetime(df["QueryTime"]).dt.hour
     df["is_after_hours"] = ((df["hour_of_day"] < 7) | (df["hour_of_day"] > 17)).astype(int)
     le = LabelEncoder()
@@ -662,3 +697,55 @@ async def live_log_stream():
                 yield f"event: error\ndata: {str(e)}\n\n"
                 await asyncio.sleep(2)
     return StreamingResponse(event_generator(), media_type="text/event-stream")
+
+@app.get("/employee/info/{employee_id}")
+def get_employee_info(employee_id: int):
+    conn = get_connection()
+    cursor = conn.cursor()
+    # Lấy thông tin employee
+    cursor.execute("SELECT EmployeeID, FullName, Role, avatar_url FROM Employees WHERE EmployeeID = %s", (employee_id,))
+    emp_row = cursor.fetchone()
+    if not emp_row:
+        return {"error": "Employee not found"}
+    employee = {
+        "employee_id": emp_row[0],
+        "full_name": emp_row[1],
+        "role": emp_row[2],
+        "avatar_url": emp_row[3]
+    }
+    # Lấy các authentication events
+    cursor.execute("SELECT LoginTime, LogoutTime, SourceIP, DeviceInfo, LoginStatus, FailureReason FROM AuthenticationLogs WHERE EmployeeID = %s ORDER BY LoginTime DESC", (employee_id,))
+    auth_events = [
+        {
+            "login_time": str(row[0]),
+            "logout_time": str(row[1]),
+            "source_ip": row[2],
+            "device_info": row[3],
+            "login_status": row[4],
+            "failure_reason": row[5]
+        }
+        for row in cursor.fetchall()
+    ]
+    # Lấy các query events
+    cursor.execute("SELECT QueryLogID, QueryTime, QueryType, RowsExamined, RowsReturned, ExecutionTime, QueryLength, IsSensitive, SourceIP, Affected_table, Labels FROM QueryLogs WHERE EmployeeID = %s ORDER BY QueryTime DESC", (employee_id,))
+    query_events = [
+        {
+            "query_log_id": row[0],
+            "query_time": str(row[1]),
+            "query_type": row[2],
+            "rows_examined": row[3],
+            "rows_returned": row[4],
+            "execution_time": row[5],
+            "query_length": row[6],
+            "is_sensitive": row[7],
+            "source_ip": row[8],
+            "affected_table": row[9],
+            "labels": row[10]
+        }
+        for row in cursor.fetchall()
+    ]
+    return {
+        **employee,
+        "auth_events": auth_events,
+        "query_events": query_events
+    }

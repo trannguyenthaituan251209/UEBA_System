@@ -1,15 +1,9 @@
 import pyodbc
 import pandas as pd
 import os
+import db_connection
+conn = db_connection.get_connection()
 
-conn = pyodbc.connect(
-        "DRIVER={ODBC Driver 18 for SQL Server};"
-        "SERVER=localhost\\SQLEXPRESS;"
-        "DATABASE=AuthenticationManager;"
-        "Trusted_Connection=yes;"
-        "Encrypt=no;"
-        "TrustServerCertificate=yes;"
-)
 
 
 # New, more detailed SQL query for feature extraction
