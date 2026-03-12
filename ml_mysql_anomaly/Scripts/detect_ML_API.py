@@ -526,6 +526,9 @@ async def export_pdf_from_data(request: Request, data: Dict[str, Any] = Body(...
         # anomaly_count: lấy số lượng anomaly, không phải list
         anomaly_count = data.get("anomalies") if isinstance(data.get("anomalies"), int) else len(anomalies)
         anomaly_rate = data.get("anomaly_rate", None)
+        # Nhận device/browser info từ frontend
+        device_info = data.get("device_info", "")
+        browser_info = data.get("browser_info", "")
 
         from datetime import datetime
         import os
@@ -584,7 +587,7 @@ async def export_pdf_from_data(request: Request, data: Dict[str, Any] = Body(...
                 pdf.set_font("Arial", size=8)
         else:
             pdf.set_font("Arial", size=8)
-        # Thông tin IP và vị trí
+        # Thông tin IP, vị trí, thiết bị, trình duyệt
         ip_str = f"Client IP: {client_ip or '--'}"
         if is_local:
             loc_str = "Location: Localhost (no geolocation)"
@@ -594,6 +597,10 @@ async def export_pdf_from_data(request: Request, data: Dict[str, Any] = Body(...
             loc_str = f"Location: Not found for IP: {client_ip}"
         pdf.cell(0, 7, ip_str, ln=2, align="L")
         pdf.cell(0, 7, loc_str, ln=2, align="L")
+        if device_info:
+            pdf.cell(0, 7, f"Device: {device_info}", ln=2, align="L")
+        if browser_info:
+            pdf.cell(0, 7, f"Browser: {browser_info}", ln=2, align="L")
         pdf.set_text_color(0,0,0)
         pdf.ln(2)
         if total_rows is not None:

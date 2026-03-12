@@ -947,10 +947,18 @@ document.addEventListener('DOMContentLoaded', function() {
       try {
         // Lấy JSON detect đã lưu trước đó
         const detectJson = window.lastDetectJson || {};
+        // Bổ sung device/browser info
+        const deviceInfo = navigator.platform + ' | ' + (navigator.userAgentData ? JSON.stringify(navigator.userAgentData) : navigator.userAgent);
+        const browserInfo = navigator.userAgent;
+        const payload = {
+          ...detectJson,
+          device_info: deviceInfo,
+          browser_info: browserInfo
+        };
         const res = await fetch('https://ueba-system.onrender.com/ueba/export-pdf', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(detectJson)
+          body: JSON.stringify(payload)
         });
         if (!res.ok) throw new Error('Export failed');
         downloadBlob = await res.blob();
