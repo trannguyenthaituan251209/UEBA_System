@@ -37,7 +37,7 @@ GENAI_API_KEY = os.environ.get("GENAI_API_KEY", "")
 # JWT config — fallback phải ổn định (không random) để token sống qua server restart
 JWT_SECRET = os.environ.get("JWT_SECRET", "ueba-default-jwt-secret-change-me")
 JWT_ALGORITHM = "HS256"
-JWT_EXPIRATION_HOURS = 8
+JWT_EXPIRATION_SECONDS = 30
 
 security = HTTPBearer(auto_error=False)
 
@@ -46,7 +46,7 @@ def create_token(username: str, display_name: str, role: str):
         "sub": username,
         "name": display_name,
         "role": role,
-        "exp": datetime.utcnow() + timedelta(hours=JWT_EXPIRATION_HOURS),
+        "exp": datetime.utcnow() + timedelta(seconds=JWT_EXPIRATION_SECONDS),
         "iat": datetime.utcnow(),
     }
     return jwt.encode(payload, JWT_SECRET, algorithm=JWT_ALGORITHM)
