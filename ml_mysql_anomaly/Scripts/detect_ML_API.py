@@ -26,8 +26,8 @@ from typing import Any, Dict
 # Chuyển sang google.genai (Gemini API mới)
 import google.genai as genai
 
-# Đặt API key Gemini (thay bằng key của bạn)
-GENAI_API_KEY = "AIzaSyCsKw4NQVL-SSj3UKhW_moJyA5KmQ49-f8"
+# Đặt API key Gemini từ biến môi trường
+GENAI_API_KEY = os.environ.get("GENAI_API_KEY", "") 
 
 app = FastAPI()
 app.add_middleware(

@@ -39,7 +39,7 @@ document.addEventListener('DOMContentLoaded', async function() {
   // Kiểm tra database connection
   let dbStatus = 'unknown';
   try {
-    const res = await fetch('http://127.0.0.1:8000/dashboard/summary', {method:'GET'});
+    const res = await fetch('https://ueba-system.onrender.com/dashboard/summary', {method:'GET'});
     if (res.ok) {
       dbCheckDiv.innerHTML = `<span style="color:#22c55e;font-size:0.9rem;">[DB OK] Database connection successful.</span>`;
       dbCheckDiv.style.color = '#22c55e';
@@ -60,7 +60,7 @@ document.addEventListener('DOMContentLoaded', async function() {
   loadingDiv.style.whiteSpace = 'pre';
   logContent.appendChild(loadingDiv);
   // Connect SSE
-  const es = new EventSource('http://127.0.0.1:8000/live-log-stream');
+  const es = new EventSource('https://ueba-system.onrender.com/live-log-stream');
   let logCount = 0;
   let lastLogTime = Date.now();
   let noLogTimeout = null;
@@ -157,7 +157,7 @@ async function renderAnomalyScoreChart() {
   ctx.clearRect(0, 0, parent.offsetWidth, parent.offsetHeight);
   // Fetch data
   try {
-    const res = await fetch('http://127.0.0.1:8000/ueba/scorechart');
+    const res = await fetch('https://ueba-system.onrender.com/ueba/scorechart');
     const data = await res.json();
     const points = data.data || [];
     const threshold = data.threshold ?? 0.5;
@@ -491,7 +491,7 @@ async function renderMLDetect_DetectSection() {
   }
   try {
     // Phase 1: Fetch data WITHOUT AI context (fast)
-    const res = await fetch('http://127.0.0.1:8000/ueba/detect?skip_context=1');
+    const res = await fetch('https://ueba-system.onrender.com/ueba/detect?skip_context=1');
     const data = await res.json();
     window.lastDetectJson = data;
     if (exportBtn) {
@@ -578,7 +578,7 @@ async function renderMLDetect_DetectSection() {
       .filter(r => r.EmployeeID != null && r.anomaly_score != null)
       .map((r, i) => `#${i+1} User ${r.EmployeeID} (score: ${r.anomaly_score.toFixed(2)})`)
       .join(', ');
-    fetch('http://127.0.0.1:8000/ueba/generate-context', {
+    fetch('https://ueba-system.onrender.com/ueba/generate-context', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -727,7 +727,7 @@ document.addEventListener('DOMContentLoaded', function() {
       </div>
     `;
       try {
-        const res = await fetch(`http://127.0.0.1:8000/employee/info/${encodeURIComponent(empId)}`);
+        const res = await fetch(`https://ueba-system.onrender.com/employee/info/${encodeURIComponent(empId)}`);
         const data = await res.json();
         if (data.error) {
           empResultDiv.innerHTML = `<span style='color:#e11d48;'>${data.error}</span>`;
@@ -896,7 +896,7 @@ document.addEventListener('DOMContentLoaded', function() {
       try {
         // Lấy JSON detect đã lưu trước đó
         const detectJson = window.lastDetectJson || {};
-        const res = await fetch('http://127.0.0.1:8000/ueba/export-pdf', {
+        const res = await fetch('https://ueba-system.onrender.com/ueba/export-pdf', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(detectJson)
@@ -964,7 +964,7 @@ async function runDetection() {
     let completed = false;
     try {
         if (!!window.EventSource) {
-            const evtSource = new EventSource("http://127.0.0.1:8000/ueba/detect/progress");
+            const evtSource = new EventSource("https://ueba-system.onrender.com/ueba/detect/progress");
             evtSource.onmessage = function(event) {
                 let msg = JSON.parse(event.data);
                 if (msg.progress !== undefined) {
@@ -1035,7 +1035,7 @@ async function renderMLDetect() {
     `;
   }
   try {
-    const res = await fetch('http://127.0.0.1:8000/ueba/explain');
+    const res = await fetch('https://ueba-system.onrender.com/ueba/explain');
     console.log('API response:', res);
     const data = await res.json();
     console.log('API data:', data);
@@ -1182,7 +1182,7 @@ if (anomalyTable) {
 }
 async function renderDashboardSummary() {
   try {
-    const res = await fetch('http://127.0.0.1:8000/dashboard/summary');
+    const res = await fetch('https://ueba-system.onrender.com/dashboard/summary');
     const data = await res.json();
     document.getElementById('total_query_all').textContent = data.total_query_all ?? '--';
     document.getElementById('total_rows_examined').textContent = data.total_rows_examined ?? '--';
