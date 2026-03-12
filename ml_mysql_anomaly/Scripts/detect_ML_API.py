@@ -12,7 +12,8 @@ IFOREST_PATH = os.path.join(MODEL_DIR, "iforest.pkl")
 SCALER_PATH = os.path.join(MODEL_DIR, "scaler.pkl")
 RF_SUPERVISED_PATH = os.path.join(MODEL_DIR, "rf_supervised.pkl")
 
-from fastapi import FastAPI, Request, Body
+from fastapi import FastAPI, Request, Body, Depends, HTTPException
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 import pandas as pd
 import joblib
 from fastapi.middleware.cors import CORSMiddleware
@@ -22,12 +23,45 @@ import json
 from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score
 from fpdf import FPDF
 from typing import Any, Dict
+import jwt
+from datetime import datetime, timedelta
+import hashlib
+import secrets
 
 # Chuyển sang google.genai (Gemini API mới)
 import google.genai as genai
 
 # Đặt API key Gemini từ biến môi trường
-GENAI_API_KEY = os.environ.get("GENAI_API_KEY", "") 
+GENAI_API_KEY = os.environ.get("GENAI_API_KEY", "")
+
+# JWT config
+JWT_SECRET = os.environ.get("JWT_SECRET", secrets.token_hex(32))
+JWT_ALGORITHM = "HS256"
+JWT_EXPIRATION_HOURS = 8
+
+security = HTTPBearer(auto_error=False)
+
+def create_token(employee_id: int, full_name: str, role: str, avatar_url: str = None):
+    payload = {
+        "sub": employee_id,
+        "name": full_name,
+        "role": role,
+        "avatar": avatar_url,
+        "exp": datetime.utcnow() + timedelta(hours=JWT_EXPIRATION_HOURS),
+        "iat": datetime.utcnow(),
+    }
+    return jwt.encode(payload, JWT_SECRET, algorithm=JWT_ALGORITHM)
+
+def verify_token(credentials: HTTPAuthorizationCredentials = Depends(security)):
+    if not credentials:
+        raise HTTPException(status_code=401, detail="Not authenticated")
+    try:
+        payload = jwt.decode(credentials.credentials, JWT_SECRET, algorithms=[JWT_ALGORITHM])
+        return payload
+    except jwt.ExpiredSignatureError:
+        raise HTTPException(status_code=401, detail="Token expired")
+    except jwt.InvalidTokenError:
+        raise HTTPException(status_code=401, detail="Invalid token")
 
 app = FastAPI()
 app.add_middleware(
@@ -37,6 +71,47 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# --- Authentication Endpoints ---
+@app.post("/auth/login")
+async def login(request: Request):
+    body = await request.json()
+    employee_id = body.get("employee_id")
+    password = body.get("password")
+    if not employee_id or not password:
+        return JSONResponse(status_code=400, content={"error": "Employee ID and password are required"})
+    # Check password against env var (admin password)
+    admin_password = os.environ.get("ADMIN_PASSWORD", "admin123")
+    if password != admin_password:
+        return JSONResponse(status_code=401, content={"error": "Invalid credentials"})
+    # Look up employee in database
+    try:
+        conn = get_connection()
+        cursor = conn.cursor()
+        cursor.execute("SELECT EmployeeID, FullName, Role, avatar_url FROM Employees WHERE EmployeeID = %s", (int(employee_id),))
+        row = cursor.fetchone()
+        conn.close()
+        if not row:
+            return JSONResponse(status_code=401, content={"error": "Employee not found"})
+        token = create_token(row[0], row[1], row[2], row[3])
+        return {
+            "token": token,
+            "employee_id": row[0],
+            "full_name": row[1],
+            "role": row[2],
+            "avatar_url": row[3],
+        }
+    except Exception as e:
+        return JSONResponse(status_code=500, content={"error": str(e)})
+
+@app.get("/auth/me")
+async def auth_me(user=Depends(verify_token)):
+    return {
+        "employee_id": user["sub"],
+        "full_name": user["name"],
+        "role": user["role"],
+        "avatar_url": user.get("avatar"),
+    }
 
 def generate_context(anomaly_count, anomaly_rate, top_users, sample_data):
     prompt = (

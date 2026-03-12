@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>UEBA System - Login</title>
+  <style>
+    @font-face {
+      font-family: 'Helve';
+      src: url('./assets/fonts/UTM Helve.ttf') format('truetype');
+      font-weight: 100;
+      font-style: normal;
+      font-display: swap;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Helve', Arial, sans-serif; }
+    body {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #f4f6fa;
+    }
+    .login-container {
+      display: flex;
+      width: 860px;
+      max-width: 95vw;
+      min-height: 480px;
+      border-radius: 18px;
+      overflow: hidden;
+      box-shadow: 0 8px 40px rgba(0,0,0,0.10);
+    }
+    .login-left {
+      flex: 1;
+      background: linear-gradient(135deg, #0ea5e9 0%, #1e293b 100%);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 48px 36px;
+      color: #fff;
+    }
+    .login-left img {
+      width: 80px; height: 80px;
+      object-fit: contain;
+      margin-bottom: 24px;
+      filter: drop-shadow(0 4px 12px rgba(0,0,0,0.2));
+    }
+    .login-left h1 {
+      font-size: 1.5rem;
+      font-weight: 800;
+      margin-bottom: 8px;
+      letter-spacing: 1px;
+    }
+    .login-left p {
+      font-size: 0.85rem;
+      opacity: 0.85;
+      text-align: center;
+      line-height: 1.5;
+      max-width: 260px;
+    }
+    .login-right {
+      flex: 1;
+      background: #fff;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 48px 40px;
+    }
+    .login-right h2 {
+      font-size: 1.4rem;
+      font-weight: 700;
+      color: #1e293b;
+      margin-bottom: 6px;
+    }
+    .login-right .subtitle {
+      font-size: 0.82rem;
+      color: #94a3b8;
+      margin-bottom: 28px;
+    }
+    .form-group {
+      width: 100%;
+      margin-bottom: 18px;
+    }
+    .form-group label {
+      display: block;
+      font-size: 0.82rem;
+      font-weight: 600;
+      color: #475569;
+      margin-bottom: 6px;
+    }
+    .form-group input {
+      width: 100%;
+      padding: 12px 14px;
+      border: 1.5px solid #d1d5db;
+      border-radius: 8px;
+      font-size: 0.95rem;
+      outline: none;
+      transition: border-color 0.2s;
+      background: #f9fafb;
+    }
+    .form-group input:focus {
+      border-color: #0ea5e9;
+      background: #fff;
+    }
+    .login-btn {
+      width: 100%;
+      padding: 13px;
+      border: none;
+      border-radius: 8px;
+      background: #1e293b;
+      color: #fff;
+      font-size: 1rem;
+      font-weight: 700;
+      cursor: pointer;
+      margin-top: 8px;
+      transition: background 0.2s;
+    }
+    .login-btn:hover { background: #0ea5e9; }
+    .login-btn:disabled { background: #94a3b8; cursor: not-allowed; }
+    .login-error {
+      color: #ef4444;
+      font-size: 0.82rem;
+      margin-top: 10px;
+      min-height: 20px;
+      text-align: center;
+    }
+    .login-footer {
+      margin-top: 24px;
+      font-size: 0.72rem;
+      color: #b0b8c4;
+      text-align: center;
+    }
+    @media (max-width: 700px) {
+      .login-container { flex-direction: column; }
+      .login-left { padding: 32px 20px; }
+      .login-right { padding: 32px 20px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="login-container">
+    <div class="login-left">
+      <img src="./assets/UEBA SYSTEM.png" alt="UEBA Logo" />
+      <h1>UEBA SYSTEM</h1>
+      <p>User & Entity Behavior Analytics<br/>Enterprise Security Dashboard</p>
+    </div>
+    <div class="login-right">
+      <h2>Sign In</h2>
+      <div class="subtitle">Enter your credentials to access the dashboard</div>
+      <form id="login-form" autocomplete="off" style="width:100%;max-width:300px;">
+        <div class="form-group">
+          <label for="employee-id">Employee ID</label>
+          <input id="employee-id" type="text" placeholder="e.g. 12" required autofocus />
+        </div>
+        <div class="form-group">
+          <label for="password">Password</label>
+          <input id="password" type="password" placeholder="Enter password" required />
+        </div>
+        <button type="submit" class="login-btn" id="login-btn">Sign In</button>
+        <div class="login-error" id="login-error"></div>
+      </form>
+      <div class="login-footer">&copy; 2026 UEBA System &mdash; Group 3, FPT University</div>
+    </div>
+  </div>
+  <script>
+    const API_BASE = 'https://ueba-system.onrender.com';
+
+    // If already logged in, redirect to dashboard
+    if (localStorage.getItem('ueba_token')) {
+      window.location.href = 'index.html';
+    }
+
+    document.getElementById('login-form').addEventListener('submit', async function(e) {
+      e.preventDefault();
+      const btn = document.getElementById('login-btn');
+      const errorDiv = document.getElementById('login-error');
+      const employeeId = document.getElementById('employee-id').value.trim();
+      const password = document.getElementById('password').value;
+
+      errorDiv.textContent = '';
+      btn.disabled = true;
+      btn.textContent = 'Signing in...';
+
+      try {
+        const res = await fetch(API_BASE + '/auth/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ employee_id: employeeId, password: password })
+        });
+        const data = await res.json();
+
+        if (!res.ok) {
+          errorDiv.textContent = data.error || 'Login failed';
+          btn.disabled = false;
+          btn.textContent = 'Sign In';
+          return;
+        }
+
+        // Store session
+        localStorage.setItem('ueba_token', data.token);
+        localStorage.setItem('ueba_user', JSON.stringify({
+          employee_id: data.employee_id,
+          full_name: data.full_name,
+          role: data.role,
+          avatar_url: data.avatar_url,
+        }));
+
+        window.location.href = 'index.html';
+      } catch (err) {
+        errorDiv.textContent = 'Cannot connect to server. Please try again.';
+        btn.disabled = false;
+        btn.textContent = 'Sign In';
+      }
+    });
+  </script>
+</body>
+</html>

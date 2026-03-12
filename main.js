@@ -1,3 +1,31 @@
+// --- Session: populate user info from localStorage ---
+(function() {
+  try {
+    const user = JSON.parse(localStorage.getItem('ueba_user') || '{}');
+    if (user.full_name) {
+      const sidebarName = document.getElementById('sidebar-username');
+      const sidebarRole = document.getElementById('sidebar-role');
+      const sidebarAvatar = document.getElementById('sidebar-avatar');
+      const headerName = document.getElementById('header-username');
+      const headerAvatar = document.getElementById('header-avatar');
+      if (sidebarName) sidebarName.textContent = user.full_name;
+      if (sidebarRole) sidebarRole.textContent = user.role || '';
+      if (sidebarAvatar && user.avatar_url) sidebarAvatar.src = user.avatar_url;
+      if (headerName) headerName.textContent = user.full_name;
+      if (headerAvatar && user.avatar_url) headerAvatar.src = user.avatar_url;
+    }
+  } catch(e) {}
+  // Logout handler
+  const logoutBtn = document.getElementById('btn-logout');
+  if (logoutBtn) {
+    logoutBtn.addEventListener('click', function() {
+      localStorage.removeItem('ueba_token');
+      localStorage.removeItem('ueba_user');
+      window.location.href = 'login.html';
+    });
+  }
+})();
+
 // --- Markdown to HTML formatter for LLM context ---
 function formatMarkdown(md) {
   if (!md) return '';

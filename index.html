@@ -61,6 +61,28 @@
 
 </head>
 <body>
+<script>
+  // Session guard: redirect to login if no token
+  (function() {
+    const token = localStorage.getItem('ueba_token');
+    if (!token) {
+      window.location.href = 'login.html';
+      return;
+    }
+    // Verify token with backend
+    fetch('https://ueba-system.onrender.com/auth/me', {
+      headers: { 'Authorization': 'Bearer ' + token }
+    }).then(res => {
+      if (!res.ok) {
+        localStorage.removeItem('ueba_token');
+        localStorage.removeItem('ueba_user');
+        window.location.href = 'login.html';
+      }
+    }).catch(() => {
+      // Allow offline access if token exists (Render cold start)
+    });
+  })();
+</script>
 <div class="app" style="display:flex;width:100%;min-height:100vh;">
   <!-- SIDEBAR LEFT -->
   <aside class="sidebar-left">
@@ -116,6 +138,17 @@
         </li>
       </ul>
     </div>
+    <!-- Logged-in User & Logout -->
+    <div style="margin-top:auto;padding-top:20px;border-top:2px solid #e5e7eb;">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;">
+        <img id="sidebar-avatar" src="./assets/UnknowUser.png" alt="Avatar" style="width:36px;height:36px;border-radius:50%;object-fit:cover;" />
+        <div>
+          <div id="sidebar-username" style="font-weight:600;font-size:0.85rem;color:#222;">--</div>
+          <div id="sidebar-role" style="font-size:0.72rem;color:#94a3b8;">--</div>
+        </div>
+      </div>
+      <button type="button" id="btn-logout" style="width:100%;padding:9px;border-radius:8px;background:#ef4444;color:#fff;font-weight:600;border:none;cursor:pointer;font-size:0.85rem;transition:background 0.2s;">Logout</button>
+    </div>
   </aside>
   <main class="content">
     <!-- DASHBOARD -->
@@ -126,10 +159,10 @@
             <input type="text" placeholder="Search employee, event, ..." style="width:320px;max-width:100%;padding:10px 16px;border-radius:8px;border:1px solid #d1d5db;font-size:1rem;outline:none;" />
           </div>
           <div style="display:flex;align-items:center;gap:10px;">
-            <img src="./assets/user1.png" alt="User Avatar" style="width:40px;height:40px;border-radius:50%;object-fit:cover;box-shadow:0 2px 8px #0001;" />
+            <img id="header-avatar" src="./assets/UnknowUser.png" alt="User Avatar" style="width:40px;height:40px;border-radius:50%;object-fit:cover;box-shadow:0 2px 8px #0001;" />
             <div style="color:#222;font-size:1rem;">
               <div style="font-weight:500;">Welcome,</div>
-              <div style="font-weight:bold;">Javiel Scott</div>
+              <div style="font-weight:bold;" id="header-username">--</div>
             </div>
           </div>
         </div>
