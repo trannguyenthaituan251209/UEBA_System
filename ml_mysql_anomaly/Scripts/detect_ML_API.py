@@ -17,7 +17,6 @@ import pandas as pd
 import joblib
 from fastapi.middleware.cors import CORSMiddleware
 import time
-from transformers import pipeline
 from fastapi.responses import StreamingResponse, FileResponse, JSONResponse
 import json
 from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score
