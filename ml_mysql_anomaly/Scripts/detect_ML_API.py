@@ -526,9 +526,29 @@ async def export_pdf_from_data(request: Request, data: Dict[str, Any] = Body(...
         # anomaly_count: lấy số lượng anomaly, không phải list
         anomaly_count = data.get("anomalies") if isinstance(data.get("anomalies"), int) else len(anomalies)
         anomaly_rate = data.get("anomaly_rate", None)
-        # Nhận device/browser info từ frontend
+        # Nhận device/browser info từ frontend và clean nếu cần
         device_info = data.get("device_info", "")
         browser_info = data.get("browser_info", "")
+        # Nếu device_info là JSON raw, parse ra human-readable
+        if device_info and ('{' in device_info or '[' in device_info):
+            try:
+                import json as _json
+                raw = device_info.split('|', 1)
+                platform_part = raw[0].strip() if len(raw) > 1 else ''
+                json_part = raw[1].strip() if len(raw) > 1 else device_info
+                parsed = _json.loads(json_part)
+                if isinstance(parsed, dict):
+                    brands = parsed.get('brands', [])
+                    plat = parsed.get('platform', platform_part)
+                    mobile = parsed.get('mobile', False)
+                    brand_strs = [f"{b.get('brand','')}/{b.get('version','')}" for b in brands if 'Not' not in b.get('brand', '')]
+                    device_info = f"{plat} ({'Mobile' if mobile else 'Desktop'})"
+                    if brand_strs:
+                        device_info += f" - {', '.join(brand_strs)}"
+            except Exception:
+                device_info = device_info[:120]
+        if browser_info and len(browser_info) > 120:
+            browser_info = browser_info[:120] + '...'
 
         from datetime import datetime
         import os

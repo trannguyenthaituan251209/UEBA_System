@@ -947,9 +947,22 @@ document.addEventListener('DOMContentLoaded', function() {
       try {
         // Lấy JSON detect đã lưu trước đó
         const detectJson = window.lastDetectJson || {};
-        // Bổ sung device/browser info
-        const deviceInfo = navigator.platform + ' | ' + (navigator.userAgentData ? JSON.stringify(navigator.userAgentData) : navigator.userAgent);
-        const browserInfo = navigator.userAgent;
+        // Bổ sung device/browser info (human-readable)
+        let deviceInfo = navigator.platform || 'Unknown';
+        if (navigator.userAgentData) {
+          const ua = navigator.userAgentData;
+          deviceInfo = (ua.platform || navigator.platform || 'Unknown') + (ua.mobile ? ' (Mobile)' : ' (Desktop)');
+        }
+        let browserInfo = 'Unknown';
+        if (navigator.userAgentData && navigator.userAgentData.brands) {
+          const dominated = navigator.userAgentData.brands.filter(b => !b.brand.includes('Not'));
+          if (dominated.length) browserInfo = dominated.map(b => b.brand + '/' + b.version).join(', ');
+          else browserInfo = navigator.userAgentData.brands.map(b => b.brand + '/' + b.version).join(', ');
+        } else {
+          const ua = navigator.userAgent;
+          const m = ua.match(/(Chrome|Firefox|Safari|Edge|OPR|Opera)\/([\d.]+)/);
+          browserInfo = m ? m[1].replace('OPR','Opera') + '/' + m[2] : ua.substring(0, 80);
+        }
         const payload = {
           ...detectJson,
           device_info: deviceInfo,
