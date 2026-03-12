@@ -4,6 +4,8 @@ from db_connection import get_connection
 
 # Đường dẫn tuyệt đối tới thư mục gốc project (ml_mysql_anomaly)
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+# Thư mục gốc project (demo/)
+PROJECT_ROOT = os.path.abspath(os.path.join(BASE_DIR, '..', '..'))
 DATA_PATH = os.path.join(BASE_DIR, "data", "supervised_querylogs.csv")
 MODEL_DIR = os.path.join(BASE_DIR, "model")
 IFOREST_PATH = os.path.join(MODEL_DIR, "iforest.pkl")
@@ -456,7 +458,7 @@ async def export_pdf_from_data(request: Request, data: Dict[str, Any] = Body(...
         pdf.add_page()
         # Add custom font (assume font file is in assets/fonts/YourFont.ttf)
         # Sửa đường dẫn font: lấy từ thư mục gốc project (không phụ thuộc BASE_DIR local)
-        font_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '../../assets/fonts/SourceCodePro-VariableFont_wght.ttf'))
+        font_path = os.path.join(PROJECT_ROOT, 'assets', 'fonts', 'SourceCodePro-VariableFont_wght.ttf')
         print("[EXPORT PDF] Font path:", font_path, "Exists:", os.path.exists(font_path))
         font_name = "CustomFont"
         if os.path.exists(font_path):
@@ -470,7 +472,7 @@ async def export_pdf_from_data(request: Request, data: Dict[str, Any] = Body(...
             print(f"[EXPORT PDF] Font file not found: {font_path}. Fallback to Arial.")
             pdf.set_font("Arial", style="B", size=18)
         # Logo (bên trái)
-        logo_path = os.path.join(os.path.dirname(__file__), '../../assets/UEBA SYSTEM.png')
+        logo_path = os.path.join(PROJECT_ROOT, 'assets', 'UEBA SYSTEM.png')
         if os.path.exists(logo_path):
             pdf.image(logo_path, x=10, y=10, w=22, h=22)
         # Tiêu đề chính
