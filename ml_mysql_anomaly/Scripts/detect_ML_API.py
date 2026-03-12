@@ -34,19 +34,18 @@ import google.genai as genai
 # Đặt API key Gemini từ biến môi trường
 GENAI_API_KEY = os.environ.get("GENAI_API_KEY", "")
 
-# JWT config
-JWT_SECRET = os.environ.get("JWT_SECRET", secrets.token_hex(32))
+# JWT config — fallback phải ổn định (không random) để token sống qua server restart
+JWT_SECRET = os.environ.get("JWT_SECRET", "ueba-default-jwt-secret-change-me")
 JWT_ALGORITHM = "HS256"
 JWT_EXPIRATION_HOURS = 8
 
 security = HTTPBearer(auto_error=False)
 
-def create_token(employee_id: int, full_name: str, role: str, avatar_url: str = None):
+def create_token(username: str, display_name: str, role: str):
     payload = {
-        "sub": employee_id,
-        "name": full_name,
+        "sub": username,
+        "name": display_name,
         "role": role,
-        "avatar": avatar_url,
         "exp": datetime.utcnow() + timedelta(hours=JWT_EXPIRATION_HOURS),
         "iat": datetime.utcnow(),
     }
@@ -72,45 +71,48 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# --- Admin accounts (vendor-side, not tied to monitored employees) ---
+ADMIN_ACCOUNTS = {
+    os.environ.get("ADMIN_USER", "admin"): {
+        "password": os.environ.get("ADMIN_PASSWORD", "admin123"),
+        "display_name": "Administrator",
+        "role": "Admin",
+    },
+    "analyst": {
+        "password": os.environ.get("ANALYST_PASSWORD", "analyst123"),
+        "display_name": "Security Analyst",
+        "role": "Analyst",
+    },
+}
+
 # --- Authentication Endpoints ---
 @app.post("/auth/login")
 async def login(request: Request):
-    body = await request.json()
-    employee_id = body.get("employee_id")
-    password = body.get("password")
-    if not employee_id or not password:
-        return JSONResponse(status_code=400, content={"error": "Employee ID and password are required"})
-    # Check password against env var (admin password)
-    admin_password = os.environ.get("ADMIN_PASSWORD", "admin123")
-    if password != admin_password:
-        return JSONResponse(status_code=401, content={"error": "Invalid credentials"})
-    # Look up employee in database
     try:
-        conn = get_connection()
-        cursor = conn.cursor()
-        cursor.execute("SELECT EmployeeID, FullName, Role, avatar_url FROM Employees WHERE EmployeeID = %s", (int(employee_id),))
-        row = cursor.fetchone()
-        conn.close()
-        if not row:
-            return JSONResponse(status_code=401, content={"error": "Employee not found"})
-        token = create_token(row[0], row[1], row[2], row[3])
-        return {
-            "token": token,
-            "employee_id": row[0],
-            "full_name": row[1],
-            "role": row[2],
-            "avatar_url": row[3],
-        }
-    except Exception as e:
-        return JSONResponse(status_code=500, content={"error": str(e)})
+        body = await request.json()
+    except Exception:
+        return JSONResponse(status_code=400, content={"error": "Invalid request body"})
+    username = body.get("username", "").strip().lower()
+    password = body.get("password", "")
+    if not username or not password:
+        return JSONResponse(status_code=400, content={"error": "Username and password are required"})
+    account = ADMIN_ACCOUNTS.get(username)
+    if not account or password != account["password"]:
+        return JSONResponse(status_code=401, content={"error": "Invalid username or password"})
+    token = create_token(username, account["display_name"], account["role"])
+    return {
+        "token": token,
+        "username": username,
+        "display_name": account["display_name"],
+        "role": account["role"],
+    }
 
 @app.get("/auth/me")
 async def auth_me(user=Depends(verify_token)):
     return {
-        "employee_id": user["sub"],
-        "full_name": user["name"],
+        "username": user["sub"],
+        "display_name": user["name"],
         "role": user["role"],
-        "avatar_url": user.get("avatar"),
     }
 
 def generate_context(anomaly_count, anomaly_rate, top_users, sample_data):

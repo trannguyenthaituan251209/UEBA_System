@@ -69,11 +69,11 @@
       window.location.href = 'login.html';
       return;
     }
-    // Verify token with backend
-    fetch('https://ueba-system.onrender.com/auth/me', {
+    // Verify token with backend — chỉ kick khi 401 (token hết hạn/sai), bỏ qua lỗi server/network
+    fetch('http://127.0.0.1:8000/auth/me', {
       headers: { 'Authorization': 'Bearer ' + token }
     }).then(res => {
-      if (!res.ok) {
+      if (res.status === 401) {
         localStorage.removeItem('ueba_token');
         localStorage.removeItem('ueba_user');
         window.location.href = 'login.html';
