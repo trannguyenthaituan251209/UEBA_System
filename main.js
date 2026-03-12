@@ -1,3 +1,15 @@
+// --- Markdown to HTML formatter for LLM context ---
+function formatMarkdown(md) {
+  if (!md) return '';
+  // Escape HTML to prevent XSS
+  let text = md.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  // Remove markdown bold **text** → text and italic *text* → text
+  text = text.replace(/\*\*(.+?)\*\*/g, '$1');
+  text = text.replace(/(?<!\*)\*(?!\*)(.+?)(?<!\*)\*(?!\*)/g, '$1');
+  // Display as preformatted text — preserves whitespace, indentation, and line breaks
+  return `<pre style="font-family:'Fira Mono','Consolas','Menlo','Monaco',monospace;font-size:0.82rem;white-space:pre-wrap;word-wrap:break-word;overflow-wrap:break-word;background:#fdf6e3;color:#3b2e04;padding:16px;border-radius:8px;margin:0;max-width:100%;overflow-x:hidden;line-height:1.6;">${text}</pre>`;
+}
+
 // --- Live Log Terminal (SSE) ---
 document.addEventListener('DOMContentLoaded', async function() {
     // Luôn fetch dữ liệu dashboard khi khởi động
@@ -449,11 +461,25 @@ async function renderMLDetect_DetectSection() {
   const overviewCard = document.createElement('div');
   overviewCard.className = 'card overview';
   overviewCard.id = 'ml-detect-overview';
+  overviewCard.innerHTML = `
+    <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;padding:32px 0;">
+      <img src='./assets/UEBA_coporation_logo.png' alt='logo' style='width:48px;height:48px;object-fit:contain;filter:drop-shadow(0 2px 6px #0002);'>
+      <div class="loader"></div>
+      <span style="font-size:0.85rem;color:#888;">Loading detection overview...</span>
+    </div>
+  `;
   stackDiv.appendChild(overviewCard);
   // Bảng anomaly phía dưới nữa
   const anomalyTableCard = document.createElement('div');
   anomalyTableCard.className = 'card table';
   anomalyTableCard.id = 'ml-anomaly-table';
+  anomalyTableCard.innerHTML = `
+    <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;padding:32px 0;">
+      <img src='./assets/UEBA_coporation_logo.png' alt='logo' style='width:48px;height:48px;object-fit:contain;filter:drop-shadow(0 2px 6px #0002);'>
+      <div class="loader"></div>
+      <span style="font-size:0.85rem;color:#888;">Loading anomaly table...</span>
+    </div>
+  `;
   stackDiv.appendChild(anomalyTableCard);
   // Render dữ liệu như cũ
   const exportBtn = document.querySelector('.btn-export');
@@ -464,7 +490,8 @@ async function renderMLDetect_DetectSection() {
     exportBtn.style.cursor = 'not-allowed';
   }
   try {
-    const res = await fetch('http://127.0.0.1:8000/ueba/detect');
+    // Phase 1: Fetch data WITHOUT AI context (fast)
+    const res = await fetch('http://127.0.0.1:8000/ueba/detect?skip_context=1');
     const data = await res.json();
     window.lastDetectJson = data;
     if (exportBtn) {
@@ -473,7 +500,7 @@ async function renderMLDetect_DetectSection() {
       exportBtn.style.color = '';
       exportBtn.style.cursor = '';
     }
-    // Render tổng quan sinh động hơn
+    // Render stats immediately
     const anomalyRate = data.total_rows ? ((data.anomalies/data.total_rows)*100) : 0;
     let badge = '';
     let badgeColor = '';
@@ -489,14 +516,17 @@ async function renderMLDetect_DetectSection() {
       <div style="font-size: 0.8rem;">Anomalies Detected: <b style="font-size: 0.8rem;">${data.anomalies ?? '--'}</b></div>
       <div style="font-size: 0.8rem;">Anomaly Rate: <b style="font-size: 0.8rem;">${anomalyRate.toFixed(2)}%</b></div>
       <div style="margin:12px 0 8px 0;width:100%;height:10px;background:#e0e7ef;border-radius:6px;overflow:hidden;">
-        <div style="height:100%;width:${anomalyRate.toFixed(2)}%;background:${badgeColor};transition:width 0.6s;"></div>
+        <div style="height:100%;width:${anomalyRate.toFixed(2)  }%;background:${badgeColor};transition:width 0.6s;"></div>
       </div>
-      <p style="text-align:center;font-size:0.9rem;color:#000;">Context assessed by distilgpt2 <br> <span style="font-size:0.7rem;color:#727272;">A small model by Hugging Face</span></p>
-      <div style="font-size:0.9em;color:#1e293b;opacity:0.95;margin-top:12px;min-height:32px;">
-        <span style="font-size:1.1em;"></span> ${data.context}
+      <p style="text-align:center;font-size:0.9rem;color:#000;">Context assessed by Gemini <br> <span style="font-size:0.7rem;color:#727272;">AI-powered risk analysis</span></p>
+      <div id="ml-context-scroll" style="margin-top:12px;min-height:48px;max-height:400px;overflow-y:auto;overflow-x:hidden;height:48px;">
+        <div style="display:flex;align-items:center;gap:10px;padding:16px;">
+          <div class="loader" style="width:18px;height:18px;border-width:2px;"></div>
+          <span style="font-size:0.85rem;color:#888;">Generating AI context analysis...</span>
+        </div>
       </div>
     `;
-    // Render bảng anomaly
+    // Render table immediately
     anomalyTableCard.innerHTML = `
       <table style="width:100%;border-collapse:collapse;">
         <thead>
@@ -541,6 +571,76 @@ async function renderMLDetect_DetectSection() {
         </tbody>
       </table>
     `;
+
+    // Phase 2: Fetch AI context separately (slow) — don't block the UI
+    const topAnomalies = data.data.slice(0, 5);
+    const topUsers = topAnomalies
+      .filter(r => r.EmployeeID != null && r.anomaly_score != null)
+      .map((r, i) => `#${i+1} User ${r.EmployeeID} (score: ${r.anomaly_score.toFixed(2)})`)
+      .join(', ');
+    fetch('http://127.0.0.1:8000/ueba/generate-context', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        anomaly_count: data.anomalies,
+        anomaly_rate: data.anomaly_rate,
+        top_users: topUsers,
+        sample_data: topAnomalies
+      })
+    }).then(r => r.json()).then(ctxData => {
+      const contextText = ctxData.context || '';
+      // Update lastDetectJson with context for PDF export
+      window.lastDetectJson.context = contextText;
+      const scrollDiv = document.getElementById('ml-context-scroll');
+      if (scrollDiv) {
+        // Create pre element for typing effect
+        const cleanText = contextText.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+          .replace(/\*\*(.+?)\*\*/g, '$1')
+          .replace(/(?<!\*)\*(?!\*)(.+?)(?<!\*)\*(?!\*)/g, '$1');
+        // Remove fixed height, let content grow
+        scrollDiv.style.height = 'auto';
+scrollDiv.innerHTML = `
+<pre id="ml-context-typing"
+style="
+font-family:'Fira Mono','Consolas','Menlo','Monaco',monospace;
+font-size:0.82rem;
+white-space:pre-wrap;
+word-wrap:break-word;
+overflow-wrap:break-word;
+background:#fdf6e3;
+color:#3b2e04;
+padding:16px;
+border-radius:8px;
+margin:0;
+width:100%;
+box-sizing:border-box;
+overflow-x:hidden;
+line-height:1.6;
+"></pre>`;
+        const pre = document.getElementById('ml-context-typing');
+        // Typing effect
+        let i = 0;
+        const speed = 2;
+        function typeChar() {
+          if (i < cleanText.length) {
+            // Add characters in small chunks for performance
+            const chunk = cleanText.substring(i, i + 3);
+            pre.textContent += chunk;
+            i += 3;
+            // Auto-scroll to bottom as text appears
+            scrollDiv.scrollTop = scrollDiv.scrollHeight;
+            requestAnimationFrame(() => setTimeout(typeChar, speed));
+          }
+        }
+        typeChar();
+      }
+    }).catch(err => {
+      console.error('AI context error:', err);
+      const scrollDiv = document.getElementById('ml-context-scroll');
+      if (scrollDiv) {
+        scrollDiv.innerHTML = formatMarkdown('AI context generation failed. Please try refreshing.');
+      }
+    });
   } catch (e) {
     overviewCard.innerHTML = '<span style="color:red;">Lỗi khi tải dữ liệu ML</span>';
     anomalyTableCard.innerHTML = '';

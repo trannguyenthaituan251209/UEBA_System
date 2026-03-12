@@ -22,61 +22,50 @@ from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_sc
 from fpdf import FPDF
 from typing import Any, Dict
 
+# Chuyển sang google.genai (Gemini API mới)
+import google.genai as genai
 
+# Đặt API key Gemini (thay bằng key của bạn)
+GENAI_API_KEY = "AIzaSyCsKw4NQVL-SSj3UKhW_moJyA5KmQ49-f8"
 
-# Pipeline sinh context tự nhiên
-try:
-    context_generator = pipeline('text-generation', model='distilgpt2')
-except Exception as e:
-    context_generator = None
-
-def generate_context(anomaly_count, anomaly_rate, top_users, sample_data):
-    if context_generator is None:
-        print("[LLM] context_generator is None, fallback context.")
-        return None
-    prompt = (
-        f"The system detected {anomaly_count} anomalies with a rate of {anomaly_rate:.2%}. "
-        f"Most suspicious users: {top_users}. Sample data: {sample_data}. "
-        "Need to notify the system administrator."
-    )
-    print(f"[LLM] Prompt: {prompt}")
-    try:
-        result = context_generator(prompt, max_length=100, do_sample=True)
-        print(f"[LLM] Output: {result}")
-        return result[0]['generated_text']
-    except Exception as e:
-        print(f"[LLM] Error: {e}")
-        return None
-
-# Khai báo app trước khi add_middleware
-app = FastAPI(title="UEBA Detection API")
+app = FastAPI()
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "https://hatvaqua.online",
-        "https://ueba-system.onrender.com",
-        "https://ueba-system.onrender.com:10000",
-        "https://ueba-system.onrender.com:443",
-        "http://127.0.0.1:5500",
-        "http://localhost:5500",
-        "http://192.168.1.111:5500"
-    ],
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# UEBADetector chỉ nạp model/scaler từ file .pkl đã huấn luyện sẵn
-class UEBADetector:
-    def __init__(self):
-        self.model = joblib.load(IFOREST_PATH)
-        self.scaler = joblib.load(SCALER_PATH)
-
-    def detect(self, df):
-
-        from fastapi import Body
-        from typing import Dict, Any
-
+def generate_context(anomaly_count, anomaly_rate, top_users, sample_data):
+    prompt = (
+        f"UEBA System Alert: {anomaly_count} anomalies detected (rate: {anomaly_rate:.2%}).\n"
+        f"Top suspicious users ranked by anomaly score: {top_users}.\n\n"
+        f"Please provide:\n"
+        f"1. Overall risk assessment based on the anomaly rate and count.\n"
+        f"2. For EACH user listed above, provide a brief individual risk analysis (what their score means, potential threat level).\n"
+        f"3. Recommended actions for the administrator, prioritized by user risk level.\n"
+        f"4. General security recommendations.\n"
+        f"Keep the response concise and actionable."
+    )
+    print(f"[LLM] Prompt: {prompt}")
+    try:
+        client = genai.Client(api_key=GENAI_API_KEY)
+        # Gemini expects 'history' not 'messages', and history is a list of dicts with 'role' and 'parts'
+        history = [{"role": "user", "parts": [{"text": prompt}]}]
+        chat = client.chats.create(model="models/gemini-2.5-flash", history=history)
+        # The chat object may have a 'history' or 'last' property, but to get the model's response, send a message
+        response = chat.send_message(prompt)
+        # Extract content from response
+        part = response.candidates[0].content.parts[0] if hasattr(response, 'candidates') and response.candidates and hasattr(response.candidates[0], 'content') and response.candidates[0].content.parts else None
+        import re
+        raw_context = part.text.strip() if part and hasattr(part, 'text') and isinstance(part.text, str) else str(response)
+        # Return raw markdown text — let the frontend handle formatting
+        print(f"[LLM] Output: {raw_context}")
+        return raw_context
+    except Exception as e:
+        print(f"[LLM] Error: {e}")
+        return None
 SQL = """ 
 WITH TimeBuckets AS (
     SELECT
@@ -122,8 +111,10 @@ LEFT JOIN Employees e
     ON t.EmployeeID = e.EmployeeID
 """
 
+from typing import Optional
+
 @app.get("/ueba/detect")
-def detect_anomalies():
+def detect_anomalies(skip_context: Optional[str] = None):
     conn = get_connection()
     # Đọc trực tiếp từ database QueryLogs
     df = pd.read_sql("SELECT * FROM QueryLogs", conn).fillna(0)
@@ -157,30 +148,31 @@ def detect_anomalies():
     total_rows = int(len(df))
     anomaly_count = int(len(anomalies))
     anomaly_rate = (anomaly_count / total_rows) if total_rows else 0
-    # Lấy top 1-2 user bất thường nhất
-    top_users = []
-    for i, row in enumerate(anomalies.head(2).itertuples()):
-        emp = getattr(row, "EmployeeID", None)
-        score = getattr(row, "anomaly_score", None)
-        if emp is not None and score is not None:
-            top_users.append(f"{emp} (score: {score:.2f})")
-    top_users_str = ", ".join(top_users)
-    # Lấy 1-2 dòng dữ liệu mẫu anomaly
-    sample_data = anomalies.head(2).to_dict(orient='records') if anomaly_count > 0 else []
-    # Sinh context tự nhiên bằng transformers nếu có
-    context = generate_context(anomaly_count, anomaly_rate, top_users_str, sample_data)
-    print(f"[LLM] Final context: {context}")
-    if context is None:
-        # Fallback về context cũ nếu không sinh được
-        if anomaly_count == 0:
-            context = "System is safe. No significant anomalies detected."
-        elif anomaly_rate < 0.05:
-            context = f"System is safe. {anomaly_count} minor anomalies detected. Most abnormal user: {top_users_str}."
-        elif anomaly_rate < 0.15:
-            context = f"Warning: {anomaly_count} anomalies detected. Most abnormal user: {top_users_str}. Please review recent activities."
-        else:
-            context = f"Danger: High anomaly rate ({anomaly_rate:.1%})! Top outlier(s): {top_users_str}. Immediate investigation recommended."
-    print(f"[LLM] Used context: {context}")
+
+    # Nếu skip_context, không gọi AI
+    context = None
+    if not skip_context:
+        # Lấy top 5 user bất thường nhất
+        top_users = []
+        for i, row in enumerate(anomalies.head(5).itertuples()):
+            emp = getattr(row, "EmployeeID", None)
+            score = getattr(row, "anomaly_score", None)
+            if emp is not None and score is not None:
+                top_users.append(f"#{i+1} User {emp} (score: {score:.2f})")
+        top_users_str = ", ".join(top_users)
+        sample_data = anomalies.head(5).to_dict(orient='records') if anomaly_count > 0 else []
+        context = generate_context(anomaly_count, anomaly_rate, top_users_str, sample_data)
+        print(f"[LLM] Final context: {context}")
+        if context is None:
+            if anomaly_count == 0:
+                context = "System is safe. No significant anomalies detected."
+            elif anomaly_rate < 0.05:
+                context = f"System is safe. {anomaly_count} minor anomalies detected."
+            elif anomaly_rate < 0.15:
+                context = f"Warning: {anomaly_count} anomalies detected. Please review recent activities."
+            else:
+                context = f"Danger: High anomaly rate ({anomaly_rate:.1%})! Immediate investigation recommended."
+        print(f"[LLM] Used context: {context}")
 
     # Tìm đúng tên cột QueryLogID (phân biệt hoa thường)
     querylogid_col = None
@@ -211,6 +203,25 @@ def detect_anomalies():
             for _, row in top_anomalies.iterrows()
         ]
     }
+
+@app.post("/ueba/generate-context")
+def generate_context_api(body: Dict[str, Any] = Body(...)):
+    """Endpoint riêng để sinh AI context, gọi sau khi đã có dữ liệu detect."""
+    anomaly_count = body.get("anomaly_count", 0)
+    anomaly_rate = body.get("anomaly_rate", 0)
+    top_users = body.get("top_users", "")
+    sample_data = body.get("sample_data", [])
+    context = generate_context(anomaly_count, anomaly_rate, top_users, sample_data)
+    if context is None:
+        if anomaly_count == 0:
+            context = "System is safe. No significant anomalies detected."
+        elif anomaly_rate < 0.05:
+            context = f"System is safe. {anomaly_count} minor anomalies detected."
+        elif anomaly_rate < 0.15:
+            context = f"Warning: {anomaly_count} anomalies detected. Please review recent activities."
+        else:
+            context = f"Danger: High anomaly rate ({anomaly_rate:.1%})! Immediate investigation recommended."
+    return {"context": context}
 
 
 
@@ -424,9 +435,10 @@ async def export_pdf_from_data(request: Request, data: Dict[str, Any] = Body(...
                 resp = requests.get(f"http://ip-api.com/json/{client_ip}?fields=status,country,regionName,city,query,lat,lon,isp")
                 if resp.ok:
                     geo_info = resp.json()
-            except Exception as ex:
-                print(f"[EXPORT PDF] Geo lookup error: {ex}")
-                geo_info = {}
+            except Exception as e:
+                print(f"[LLM] Error: {e}")
+                return None
+
         # anomalies: lấy từ data['data'] nếu có, nếu không thì từ data['anomalies'] nếu là list
         anomalies = data.get("data")
         if anomalies is None:
@@ -508,9 +520,42 @@ async def export_pdf_from_data(request: Request, data: Dict[str, Any] = Body(...
             pdf.cell(0, 8, f"Anomalies: {anomaly_count}", ln=1, align="L")
         if anomaly_rate is not None:
             pdf.cell(0, 8, f"Anomaly rate: {anomaly_rate:.2%}", ln=1, align="L")
+        pdf.ln(4)
+
+        # --- AI-Context Section ---
         if context:
-            pdf.multi_cell(0, 8, f"Context by ML: {context}", align="L")
-        pdf.ln(2)
+            # Section header
+            if os.path.exists(font_path):
+                try:
+                    pdf.set_font(font_name, size=14)
+                except Exception:
+                    pdf.set_font("Arial", style="B", size=14)
+            else:
+                pdf.set_font("Arial", style="B", size=14)
+            pdf.set_text_color(30, 80, 160)
+            pdf.cell(0, 10, "AI-Context Analysis (Gemini)", ln=1, align="L")
+            # Divider line
+            pdf.set_draw_color(30, 80, 160)
+            pdf.set_line_width(0.5)
+            pdf.line(10, pdf.get_y(), 200, pdf.get_y())
+            pdf.ln(3)
+            # Context body
+            if os.path.exists(font_path):
+                try:
+                    pdf.set_font(font_name, size=9)
+                except Exception:
+                    pdf.set_font("Arial", size=9)
+            else:
+                pdf.set_font("Arial", size=9)
+            pdf.set_text_color(0, 0, 0)
+            # Strip markdown bold/italic markers for clean PDF text
+            import re as _re
+            clean_context = _re.sub(r'\*\*(.+?)\*\*', r'\1', context)
+            clean_context = _re.sub(r'(?<!\*)\*(?!\*)(.+?)(?<!\*)\*(?!\*)', r'\1', clean_context)
+            pdf.multi_cell(0, 6, clean_context, align="L")
+            pdf.ln(4)
+            pdf.set_text_color(0, 0, 0)
+
         # Table header
         if os.path.exists(font_path):
             try:
