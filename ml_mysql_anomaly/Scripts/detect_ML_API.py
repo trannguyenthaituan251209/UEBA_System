@@ -462,6 +462,10 @@ async def export_pdf_from_data(request: Request, data: Dict[str, Any] = Body(...
         font_name = "CustomFont"
         if os.path.exists(font_path):
             try:
+                # Xoá .pkl cache cũ để fpdf tạo lại đúng cho platform hiện tại
+                pkl_path = font_path[:-4] + '.pkl'
+                if os.path.exists(pkl_path):
+                    os.remove(pkl_path)
                 pdf.add_font(font_name, '', font_path, uni=True)
                 pdf.set_font(font_name, size=18)
             except Exception as font_err:
@@ -651,7 +655,11 @@ async def export_pdf_from_data(request: Request, data: Dict[str, Any] = Body(...
             pdf.set_font("Arial", style="B", size=12)
         pdf.cell(0, 8, "--THE END--", ln=1, align="C")
         from io import BytesIO
-        pdf_bytes = pdf.output(dest='S').encode('latin1')
+        pdf_output = pdf.output(dest='S')
+        if isinstance(pdf_output, str):
+            pdf_bytes = pdf_output.encode('latin1')
+        else:
+            pdf_bytes = bytes(pdf_output)
         pdf_buffer = BytesIO(pdf_bytes)
         pdf_buffer.seek(0)
         return StreamingResponse(
@@ -661,7 +669,7 @@ async def export_pdf_from_data(request: Request, data: Dict[str, Any] = Body(...
         )
     except Exception as e:
         from fastapi.responses import JSONResponse
-        return JSONResponse(content={"success": False, "error": str(e)})
+        return JSONResponse(status_code=500, content={"success": False, "error": str(e)})
     # Dashboard summary endpoint
 
 # Dashboard summary endpoint (tổng hợp toàn bộ lịch sử)

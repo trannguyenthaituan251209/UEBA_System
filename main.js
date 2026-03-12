@@ -155,10 +155,16 @@ async function renderAnomalyScoreChart() {
   const ctx = canvas.getContext('2d');
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   ctx.clearRect(0, 0, parent.offsetWidth, parent.offsetHeight);
-  // Fetch data
+  // Fetch data (dùng cache nếu có)
   try {
-    const res = await fetch('https://ueba-system.onrender.com/ueba/scorechart');
-    const data = await res.json();
+    let data;
+    if (window.cachedScoreChartData) {
+      data = window.cachedScoreChartData;
+    } else {
+      const res = await fetch('https://ueba-system.onrender.com/ueba/scorechart');
+      data = await res.json();
+      window.cachedScoreChartData = data;
+    }
     const points = data.data || [];
     const threshold = data.threshold ?? 0.5;
     if (!points.length) {
@@ -419,8 +425,11 @@ function showPage(id, event) {
   const el = document.getElementById(id);
   if (el) el.classList.add('active');
   if (id === 'detect') {
-    renderMLDetect_DetectSection();
-    setTimeout(renderAnomalyScoreChart, 300); // Đảm bảo DOM đã render xong
+    // Chỉ fetch lại nếu chưa có dữ liệu cache
+    if (!window.detectPageRendered) {
+      renderMLDetect_DetectSection();
+      setTimeout(renderAnomalyScoreChart, 300);
+    }
   }
   if (id === 'dashboard') {
    renderDashboardSummary()
@@ -429,7 +438,16 @@ function showPage(id, event) {
 // Render dữ liệu anomaly từ /ueba/detect vào bảng list
 // Biến toàn cục lưu detect JSON mới nhất
 window.lastDetectJson = null;
+// Cache flag: true nếu detect page đã được render và có dữ liệu
+window.detectPageRendered = false;
+// Flag: đang loading detect page (tránh gọi trùng khi chuyển tab nhanh)
+window.detectPageLoading = false;
+// Cache dữ liệu scorechart để không fetch lại
+window.cachedScoreChartData = null;
 async function renderMLDetect_DetectSection() {
+  // Nếu đã render rồi hoặc đang loading thì không làm gì
+  if (window.detectPageRendered || window.detectPageLoading) return;
+  window.detectPageLoading = true;
   // Layout stack: chart trên, đánh giá dưới
   const detectSection = document.getElementById('detect');
   if (!detectSection) return;
@@ -641,7 +659,11 @@ line-height:1.6;
         scrollDiv.innerHTML = formatMarkdown('AI context generation failed. Please try refreshing.');
       }
     });
+    // Đánh dấu đã render xong, không cần fetch lại khi chuyển tab
+    window.detectPageRendered = true;
+    window.detectPageLoading = false;
   } catch (e) {
+    window.detectPageLoading = false;
     overviewCard.innerHTML = '<span style="color:red;">Lỗi khi tải dữ liệu ML</span>';
     anomalyTableCard.innerHTML = '';
     console.error('ML Detect error:', e);
@@ -701,6 +723,11 @@ document.addEventListener('DOMContentLoaded', function() {
       // Only refresh if Detect page is visible
       const detectPage = document.getElementById('detect');
       if (detectPage && detectPage.classList.contains('active')) {
+        // Xóa cache để force re-fetch
+        window.detectPageRendered = false;
+        window.detectPageLoading = false;
+        window.lastDetectJson = null;
+        window.cachedScoreChartData = null;
         // Call the main render functions for Detect page
         if (typeof renderMLDetect_Overview === 'function') renderMLDetect_Overview();
         if (typeof renderAnomalyScoreChart === 'function') renderAnomalyScoreChart();
@@ -1189,7 +1216,7 @@ async function renderDashboardSummary() {
     document.getElementById('total_events').textContent = data.total_events ?? '--';
     document.getElementById('failed_auth_all').textContent = data.failed_auth_all ?? '--';
   } catch (e) {
-    // Nếu lỗi, giữ nguyên giá trị cũ
+    // Nếu lỗi, giữ nguyên giá trị cũ 
     console.error('Dashboard summary error:', e);
   }
 }

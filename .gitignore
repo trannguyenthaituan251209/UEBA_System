@@ -1,0 +1,7 @@
+# Font cache (fpdf generates .pkl alongside .ttf — platform-specific)
+assets/fonts/*.pkl
+ml_mysql_anomaly/Scripts/assets/fonts/*.pkl
+
+# Python
+__pycache__/
+*.pyc
